@@ -1,4 +1,4 @@
-package pl.mareklangiewicz.pue
+package pl.mareklangiewicz.upue
 
 import com.google.common.collect.Range
 import com.google.common.truth.BigDecimalSubject
@@ -15,7 +15,7 @@ import com.google.common.truth.ThrowableSubject
 import com.google.common.truth.Truth.assert_
 import java.math.BigDecimal
 
-val Assert: StandardSubjectBuilder by pl.mareklangiewicz.pue.lazy { assert_() }
+val Assert: StandardSubjectBuilder by lazy { assert_() }
 
 // TODO NOW: investigate project Kluent (https://github.com/MarkusAmshove/Kluent)
 // (but be careful about polluting too broad namespaces..)

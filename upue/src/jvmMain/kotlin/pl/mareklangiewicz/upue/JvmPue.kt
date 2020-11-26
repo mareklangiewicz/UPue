@@ -1,4 +1,4 @@
-package pl.mareklangiewicz.pue
+package pl.mareklangiewicz.upue
 
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService

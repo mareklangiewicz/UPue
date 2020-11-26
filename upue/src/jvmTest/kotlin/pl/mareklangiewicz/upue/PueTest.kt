@@ -1,4 +1,4 @@
-package pl.mareklangiewicz.pue
+package pl.mareklangiewicz.upue
 
 import org.junit.After
 import org.junit.Before

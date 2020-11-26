@@ -1,13 +1,10 @@
 
-group = "com.github.langara"
-
 allprojects {
-
     repositories {
         google()
         jcenter()
         mavenCentral()
-        maven { url "https://jitpack.io" }
+        maven("https://jitpack.io")
     }
 }
 

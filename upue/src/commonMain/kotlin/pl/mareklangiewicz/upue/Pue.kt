@@ -1,4 +1,4 @@
-package pl.mareklangiewicz.pue
+package pl.mareklangiewicz.upue
 
 /**
  * Created by Marek Langiewicz on 20.02.16.

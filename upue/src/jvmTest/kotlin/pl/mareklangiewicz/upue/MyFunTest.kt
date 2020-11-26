@@ -1,8 +1,8 @@
-package pl.mareklangiewicz.pue
+package pl.mareklangiewicz.upue
 
 import org.junit.Test
 
-class MyFunctionsTest {
+class MyFunTest {
 
     @Suppress("DEPRECATION")
     @Test
@@ -22,12 +22,12 @@ class MyFunctionsTest {
         Assert That list IsEqualTo listOf(1, 2)
         addNext()
         Assert That list IsEqualTo listOf(1, 2, 3)
-        val addNexMemoized = memoize(addNext)
-        addNexMemoized()
+        val addNextMemoized = memoize(addNext)
+        addNextMemoized()
         Assert That list IsEqualTo listOf(1, 2, 3, 4)
-        addNexMemoized()
+        addNextMemoized()
         Assert That list IsEqualTo listOf(1, 2, 3, 4) // no change here
-        addNexMemoized()
+        addNextMemoized()
         Assert That list IsEqualTo listOf(1, 2, 3, 4) // no change here
         addNext()
         Assert That list IsEqualTo listOf(1, 2, 3, 4, 5)
