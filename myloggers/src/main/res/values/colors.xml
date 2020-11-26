@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="ml_li_head_text">@android:color/black</color>
-    <color name="ml_li_separator">@android:color/darker_gray</color>
-</resources>

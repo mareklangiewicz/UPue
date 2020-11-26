@@ -1,0 +1,43 @@
+plugins {
+    kotlin("multiplatform") version "1.4.10"
+    `maven-publish`
+}
+
+repositories {
+    mavenCentral()
+}
+
+kotlin {
+    jvm()
+//    js {
+//        browser()
+//    }
+//    linuxX64()
+
+    sourceSets {
+        val commonMain by getting
+        val commonTest by getting {
+            dependencies {
+                implementation(kotlin("test-common"))
+                implementation(kotlin("test-annotations-common"))
+            }
+        }
+        val jvmMain by getting {
+            dependencies {
+                implementation(Deps.junit4)
+                implementation(Deps.googleTruth)
+            }
+
+        }
+    }
+}
+
+//// build a jar with source files
+//task sourcesJar(type: Jar) {
+//    from sourceSets.main.java.srcDirs
+//    classifier = 'sources'
+//}
+//
+//artifacts {
+//    archives sourcesJar
+//}
