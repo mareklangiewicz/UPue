@@ -13,29 +13,33 @@ fun <T> ident(t: T): T = t
 
 fun <T> const(t: T) = { _: Unit -> t }
 
+
+//TODO NOW!!: all pue base types -> fun interfaces; all operators in this file -> operators on pue fun interfaces
+//(deprecate not really needed stuff)
+
 /** function compositions: (f * g)(x) = g(f(x)) (works also for objects with 'invoke' method */
-operator infix fun <A, B> Function0<A>.times(f: Function1<A, B>): Function0<B> = { f(this()) }
+infix operator fun <A, B> Function0<A>.times(f: Function1<A, B>): Function0<B> = { f(this()) }
 
-operator infix fun <A, B, C> Function1<A, B>.times(f: Function1<B, C>): Function1<A, C> = { f(this(it)) }
+infix operator fun <A, B, C> Function1<A, B>.times(f: Function1<B, C>): Function1<A, C> = { f(this(it)) }
 
-operator infix fun <A, B, C, D> Function2<A, B, C>.times(f: Function1<C, D>): Function2<A, B, D> = { a, b -> f(this(a, b)) }
+infix operator fun <A, B, C, D> Function2<A, B, C>.times(f: Function1<C, D>): Function2<A, B, D> = { a, b -> f(this(a, b)) }
 
-operator infix fun <A, B, C, D, E> Function3<A, B, C, D>.times(f: Function1<D, E>): Function3<A, B, C, E> = { a, b, c -> f(this(a, b, c)) }
+infix operator fun <A, B, C, D, E> Function3<A, B, C, D>.times(f: Function1<D, E>): Function3<A, B, C, E> = { a, b, c -> f(this(a, b, c)) }
 
 /** a "pipe" */
-operator infix fun <A, B> A.div(f: Function1<A, B>): B = f(this)
+infix operator fun <A, B> A.div(f: Function1<A, B>): B = f(this)
 
 /** It just perform additional given action on any function result. Here U is usually Unit. It is ignored anyway */
-operator infix fun <A, U> Function0<A>.rem(f: Function1<A, U>): Function0<A>
+infix operator fun <A, U> Function0<A>.rem(f: Function1<A, U>): Function0<A>
         = { val a = this(); f(a); a }
 
-operator infix fun <A, B, U> Function1<A, B>.rem(f: Function1<B, U>): Function1<A, B>
+infix operator fun <A, B, U> Function1<A, B>.rem(f: Function1<B, U>): Function1<A, B>
         = { val b = this(it); f(b); b }
 
-operator infix fun <A, B, C, U> Function2<A, B, C>.rem(f: Function1<C, U>): Function2<A, B, C>
+infix operator fun <A, B, C, U> Function2<A, B, C>.rem(f: Function1<C, U>): Function2<A, B, C>
         = { a, b -> val c = this(a, b); f(c); c }
 
-operator infix fun <A, B, C, D, U> Function3<A, B, C, D>.rem(f: Function1<D, U>): Function3<A, B, C, D>
+infix operator fun <A, B, C, D, U> Function3<A, B, C, D>.rem(f: Function1<D, U>): Function3<A, B, C, D>
         = { a, b, c -> val d = this(a, b, c); f(d); d }
 
 
