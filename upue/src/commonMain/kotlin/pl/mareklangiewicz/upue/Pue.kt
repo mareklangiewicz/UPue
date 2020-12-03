@@ -40,25 +40,25 @@ package pl.mareklangiewicz.upue
  * objects should behave. Such restrictions will extend our base rules (base protocol).
  * First restriction/extension will be:
  * If we push or pull nullable types - null item means the end of the stream.
- *
- *
- * TODO LATER: IMPORTANT: make most functions inline..
- * DETAILS:
- * I had some strange problems with inlining functions so I removed all 'inline', 'reified', 'crossinline', etc. modifiers for now.
- * But it is important to put it back when this library is more mature because inlining can provide a lot of performance
- * especially in this kind of code.
- * Example of compilation error: java.lang.UnsupportedOperationException: Don't render receiver parameters
- * (looks like I should mark receiver function object of my function as crossinline and this is not possible in Kotlin now...)
  */
 
 
-typealias IPuee<T, R> = (T) -> R
+fun interface Puee<in T, out R> { operator fun invoke(t: T): R }
 
 /** passive producer (similar to iterator) */
-typealias IPullee<R> = IPuee<Unit, R>
+typealias Pullee<R> = Puee<Unit, R>
 
 /** passive consumer (similar to rx: observer) */
-typealias IPushee<T> = IPuee<T, Unit>
+typealias Pushee<T> = Puee<T, Unit>
+
+// TODO: think again about using inheritance and two additional fun interfaces for Pullee and Pushee (and Puller/Pusher?)
+//   it would be clearer division between push based logic and pull based logic, and we would have operators
+//   without ugly prefixes (like map instead of vmap and amap and with less type parameters - now we have cases
+//   where these type parameters cannot be inferred, so f. e. amap<A, V, B> usage becomes really ugly)
+//   Later: I'm not sure about NPullee, NPushee, etc as separate fun interfaces too..
+//   I tried it once and it looks like it would complicate the library implementation too much
+//   (repeating all operators for different base interfaces, and nullable / non-nullable type parameters)
+//   Using null-ending as less formal convention seems to be working okeish. Maybe experiment again much later.
 
 
 /**
@@ -75,7 +75,7 @@ typealias IPushee<T> = IPuee<T, Unit>
  * Function1<ICommand, Unit> where the Command can be: Start, Stop, Pause, Cancel, etc...
  *
  */
-typealias IPuer<T, R, Cmd> = (IPuee<T, R>) -> IPushee<Cmd>
+fun interface Puer<out T, in R, in Cmd> : Puee<Puee<T, R>, Pushee<Cmd>>
 
 /* Do not read next line if you don't want to be confused:
  * A puer is actually also type of puee: typealias IPuer<T, R, Cmd> = IPuee<IPuee<T, R>,IPushee<Cmd>>
@@ -83,10 +83,10 @@ typealias IPuer<T, R, Cmd> = (IPuee<T, R>) -> IPushee<Cmd>
  */
 
 /** active consumer (similar to java 8: collector) */
-typealias IPuller<R, Cmd> = IPuer<Unit, R, Cmd>
+typealias Puller<R, Cmd> = Puer<Unit, R, Cmd>
 
 /** active producer (similar to rx.observable) */
-typealias IPusher<T, Cmd> = IPuer<T, Unit, Cmd>
+typealias Pusher<T, Cmd> = Puer<T, Unit, Cmd>
 
 // IMPORTANT:
 // First (and most general) extension to our basic protocol defined by interfaces above is: null value means: end of the stream.
@@ -95,12 +95,12 @@ typealias IPusher<T, Cmd> = IPuer<T, Unit, Cmd>
 
 
 // NPullee means Pullee that returns null when the stream has ended.
-fun <R> Iterator<R>.asNPullee() = { _: Unit -> if (hasNext()) next() else null }
+fun <R> Iterator<R>.asNPullee() = Pullee { if (hasNext()) next() else null }
 
 fun <R> Iterable<R>.asNPullee() = iterator().asNPullee()
 fun <R> Sequence<R>.asNPullee() = iterator().asNPullee()
 
-fun <R> nPulleeOf(vararg ts: R) = ts.iterator().asNPullee()
+fun <R> nPulleeOf(vararg rs: R) = rs.iterator().asNPullee()
 
 // Examples how to create simple NPullee:
 // (1..50).asNPullee()
@@ -112,7 +112,7 @@ fun <R> nPulleeOf(vararg ts: R) = ts.iterator().asNPullee()
  * This allows to use "for in" loop to traverse through NPullee.
  * TODO: tests and examples
  */
-operator fun <R> IPullee<R?>.iterator() = object : Iterator<R> {
+operator fun <R> Pullee<R>.iterator() = object : Iterator<R> {
 
     var end = false
     var current: R? = null
@@ -144,9 +144,9 @@ operator fun <R> IPullee<R?>.iterator() = object : Iterator<R> {
     }
 }
 
-fun <R> IPullee<R>.cut(end: R) = object : IPullee<R> {
-    var up: IPullee<R>? = this@cut
-    override fun invoke(u: Unit): R {
+fun <R> Pullee<R>.cut(end: R) = object : Pullee<R> {
+    var up: Pullee<R>? = this@cut
+    override fun invoke(t: Unit): R {
         up?.run {
             val r = invoke(Unit)
             if (r != end) return r
@@ -156,7 +156,7 @@ fun <R> IPullee<R>.cut(end: R) = object : IPullee<R> {
     }
 }
 
-fun <R> IPullee<R?>.ncut() = cut(null)
+fun <R> Pullee<R>.ncut() = cut(null)
 
 /**
  * TODO: version for Puller (using lift?)
@@ -176,16 +176,16 @@ fun <R> IPullee<R?>.ncut() = cut(null)
  * We also can easily add more types of events when needed.
  * And different puers can support different subset of events..
  */
-interface IEvent<out I>
+interface Event<out I>
 
-data class Item<out I>(val item: I) : IEvent<I> // sends next item (similar to rx: onNext)
-data class Error<out I>(val error: Throwable) : IEvent<I> // sends some error; (similar to rx: onError, but it does NOT end the stream)
+data class Item<out I>(val item: I) : Event<I> // sends next item (similar to rx: onNext)
+data class Error(val error: Throwable) : Event<Nothing> // sends some error; (similar to rx: onError, but it does NOT end the stream)
 
 @Deprecated("Use null value instead")
-class Completed<out I> : IEvent<I> // Do not use it: in this library just use null to notify the end of the stream.
+class Completed : Event<Nothing> // Do not use it: in this library just use null to notify the end of the stream.
 
 // Example of how to extend type of events we can use:
-data class Warning<out I>(val warning: Throwable) : IEvent<I> // sends some warning; does NOT end the stream
+data class Warning(val warning: Throwable) : Event<Nothing> // sends some warning; does NOT end the stream
 
 
 /**
@@ -213,40 +213,36 @@ data class Warning<out I>(val warning: Throwable) : IEvent<I> // sends some warn
 
 
 // A IPuer can return some IPushee<ICommand> you can use to control the way it works.
-interface ICommand
+interface Command
 
-object Cancel : ICommand // can be used similarly to rx: Subscription.unsubscribe
+object Cancel : Command // can be used similarly to rx: Subscription.unsubscribe
 // Every epuer should support Cancel command. Other commands are optional.
-object Start : ICommand // can be used similarly to rx: ConnectableObservable.connect
+object Start : Command // can be used similarly to rx: ConnectableObservable.connect
 
-object Stop : ICommand
-object Pause : ICommand
-object Step : ICommand
-object Tick : ICommand
-object Tock : ICommand
+object Stop : Command
+object Pause : Command
+object Step : Command
+object Tick : Command
+object Tock : Command
 
-data class Request(val count: Long) : ICommand // for future backpressure implementation (for particular IPuers only)
+data class Request(val count: Long) : Command // for future backpressure implementation (for particular IPuers only)
 // Puer should keep track how many items are requested so far and how many has been emited already - and NOT emit more than requested.
 
 // user can add more special case commands for his special puers. For example:
-data class Inject<out T>(val item: T) : ICommand // Commanding puer to push additional item provided "by hand" immediately.
+data class Inject<out T>(val item: T) : Command // Commanding puer to push additional item provided "by hand" immediately.
 
 
 // Our base interfaces using IEvent and ICommand (with prefix E):
 
-typealias IEPullee<R> = IPullee<IEvent<R>?>
+typealias EPullee<R> = Pullee<Event<R>?>
 
+typealias EPushee<T> = Pushee<Event<T>?>
 
-typealias IEPushee<T> = IPushee<IEvent<T>?>
+typealias EPuller<R> = Puller<Event<R>?, Command>
 
+typealias EPusher<T> = Pusher<Event<T>?, Command>
 
-typealias IEPuller<R> = IPuller<IEvent<R>?, ICommand>
-
-
-typealias IEPusher<T> = IPusher<IEvent<T>?, ICommand>
-
-
-fun <R> Iterator<R>.asEPullee(): IEPullee<R> = { if (hasNext()) Item(next()) else null }
+fun <R> Iterator<R>.asEPullee() = EPullee { if (hasNext()) Item(next()) else null }
 
 // We could also just use vnmap operator like this:
 //fun <R> Iterator<R>.asEPullee(): IEPullee<R> = asNPullee().vnmap { Item(it) }
@@ -266,7 +262,7 @@ fun <R> ePulleeOf(vararg ts: R) = ts.iterator().asEPullee()
 
 
 // It will extract items; pass through nulls; throw on errors and any other IEvents
-fun <I> IEPullee<I>.vitems() = vnmap {
+fun <I> EPullee<I>.vitems() = vnmap {
     when (it) {
         is Item -> it.item
         else -> throw IllegalStateException("Unsupported event: $it")
@@ -275,7 +271,7 @@ fun <I> IEPullee<I>.vitems() = vnmap {
 
 // Dual to vitems but for pushees (reminder: pushee is a kind of passive consumer)
 // implementation is simple but it requres some "backward" thinking to really understand it :)
-fun <I> IPushee<I?>.aitems() = anmap<I, Unit, IEvent<I>?> {
+fun <I> Pushee<I?>.aitems() = anmap<I, Unit, Event<I>?> {
     when (it) {
         is Item -> it.item
         else -> throw IllegalStateException("Unsupported event: $it")
@@ -286,7 +282,7 @@ fun <I> IPushee<I?>.aitems() = anmap<I, Unit, IEvent<I>?> {
 
 typealias Millis = Long // TODO SOMEDAY: use newtype when kotlin has it
 
-typealias CurrentTime = IPullee<Millis> // TODO SOMEDAY: use newtype when kotlin has it
+typealias CurrentTime = Pullee<Millis> // TODO SOMEDAY: use newtype when kotlin has it
 
 interface IScheduler {
     /**
@@ -295,7 +291,7 @@ interface IScheduler {
      * (If some implementation does not support delays - it can throw UnsupportedOperationException if delay is > 0)
      * No delay does not have to mean: immediately - actual execution time is implementation specific.
      */
-    fun schedule(delay: Long = 0, action: (Unit) -> Unit): IPushee<Cancel>
+    fun schedule(delay: Long = 0, action: (Unit) -> Unit): Pushee<Cancel>
 
     val now: CurrentTime
 }
@@ -311,7 +307,7 @@ class FutureScheduler(val scheduler: IScheduler, val future: Millis) : ISchedule
 
     override fun schedule(delay: Long, action: (Unit) -> Unit) = scheduler.schedule(delay + future, action)
 
-    override val now = { u: Unit -> scheduler.now(u) + future }
+    override val now = Pullee { scheduler.now(Unit) + future }
 }
 // TODO LATER: test it
 
@@ -324,18 +320,18 @@ class FutureScheduler(val scheduler: IScheduler, val future: Millis) : ISchedule
  * UPDATE: It supports Tick and Tock commands too (just like Step)
  * UPDATE: It supports Inject command too.
  */
-open class StepPusher(val step: Long = 1, val tick: Long = 1, val tock: Long = 1) : IPusher<Long, ICommand> {
+open class StepPusher(val step: Long = 1, val tick: Long = 1, val tock: Long = 1) : Pusher<Long, Command> {
 
-    protected class Pusher(
-            private var function: IPushee<Long>?,
+    protected class SPusher(
+            private var function: Pushee<Long>?,
             val step: Long = 1,
             val tick: Long = 1,
             val tock: Long = 1
-    ) : IPushee<ICommand> {
+    ) : Pushee<Command> {
 
         var started = false
 
-        override fun invoke(cmd: ICommand) {
+        override fun invoke(cmd: Command) {
             when (cmd) {
                 Cancel -> {
                     started = false
@@ -352,8 +348,8 @@ open class StepPusher(val step: Long = 1, val tick: Long = 1, val tock: Long = 1
         }
     }
 
-    override fun invoke(f: IPushee<Long>): IPushee<ICommand> {
-        return Pusher(f, step, tick, tock)
+    override operator fun invoke(f: Pushee<Long>): Pushee<Command> {
+        return SPusher(f, step, tick, tock)
     }
 }
 
@@ -370,22 +366,22 @@ open class StepPusher(val step: Long = 1, val tick: Long = 1, val tock: Long = 1
  * If intervals have ended (returned null): Timer will push null value once and finish (detach from its pushee).
  * If we subscribe more than once: all subscribers will share the same scheduler and all will pull intervals from the same pullee!
  */
-class Timer(private val scheduler: IScheduler, private val intervals: IPullee<Long?>) : IPusher<Long?, ICommand> {
+class Timer(private val scheduler: IScheduler, private val intervals: Pullee<Long?>) : Pusher<Long?, Command> {
 
-    override fun invoke(pushee: IPushee<Long?>): IPushee<ICommand> = SingleTimer(pushee)
+    override fun invoke(pushee: Pushee<Long?>): Pushee<Command> = SingleTimer(pushee)
 
-    private inner class SingleTimer(private var pushee: IPushee<Long?>?) : IPushee<ICommand> {
+    private inner class SingleTimer(private var pushee: Pushee<Long?>?) : Pushee<Command> {
 
         private var counter = 0L
 
-        private var unschedule: IPushee<Cancel>? = null
+        private var unschedule: Pushee<Cancel>? = null
 
         private val action = { _: Unit ->
             pushee?.invoke(counter++)
             invoke(Start)
         }
 
-        override tailrec fun invoke(cmd: ICommand) {
+        override tailrec fun invoke(cmd: Command) {
 
             when (cmd) {
 
@@ -430,17 +426,17 @@ class Timer(private val scheduler: IScheduler, private val intervals: IPullee<Lo
 
 
 /** maps argument before giving it to receiver function - actually just a function composition */
-fun <A, V, B> IPuee<A, V>.amap(f: (B) -> A): IPuee<B, V> = f * this
+fun <A, V, B> Puee<A, V>.amap(f: Puee<B, A>): Puee<B, V> = f * this
 
 /** maps result value from function (similar to Sequence.map) - actually just a function composition */
-fun <A, V, W> IPuee<A, V>.vmap(f: (V) -> W): IPuee<A, W> = this * f
+fun <A, V, W> Puee<A, V>.vmap(f: Puee<V, W>): Puee<A, W> = this * f
 
 
 /** forwards null values down the stream */
-fun <A, V> n(f: (A) -> V): (A?) -> V? = { if (it === null) null else f(it) }
+fun <A, V> n(f: Puee<A, V>): Puee<A?, V?> = Puee { if (it === null) null else f(it) }
 
 /** maps items and forwards other events (and nulls) */
-fun <A, V> e(f: (A) -> V): (IEvent<A>?) -> IEvent<V>? = {
+fun <A, V> e(f: Puee<A, V>): Puee<Event<A>?, Event<V>?> = Puee {
     when (it) {
         is Item -> Item(f(it.item))
         is Warning -> Warning(it.warning)
@@ -452,52 +448,50 @@ fun <A, V> e(f: (A) -> V): (IEvent<A>?) -> IEvent<V>? = {
 // TODO SOMEDAY: maybe something that captures thrown exceptions in Error IEvent?
 
 
-fun <A, V, B> IPuee<A?, V>.anmap(f: (B) -> A): IPuee<B?, V> = n(f) * this
-fun <A, V, W> IPuee<A, V?>.vnmap(f: (V) -> W): IPuee<A, W?> = this * n(f)
+fun <A, V, B> Puee<A?, V>.anmap(f: Puee<B, A>): Puee<B?, V> = n(f) * this
+fun <A, V, W> Puee<A, V?>.vnmap(f: Puee<V, W>): Puee<A, W?> = this * n(f)
 
-fun <A, B> IEPushee<A>.aemap(f: (B) -> A): IEPushee<B> = (e(f) * this)
-fun <V, W> IEPullee<V>.vemap(f: (V) -> W): IEPullee<W> = (this * e(f))
+fun <A, B> EPushee<A>.aemap(f: Puee<B, A>): EPushee<B> = EPushee { (e(f) * this)(it) }
+fun <V, W> EPullee<V>.vemap(f: Puee<V, W>): EPullee<W> = EPullee { (this * e(f))(it) }
 
 
 /** allows to implement some side effect every time function is called with some argument */
-fun <A, V> IPuee<A, V>.apeek(spy: IPushee<A>): IPuee<A, V> = { spy(it); this(it) }
+fun <A, V> Puee<A, V>.apeek(spy: Pushee<A>): Puee<A, V> = Puee { spy(it); this(it) }
 
 /** allows to implement some side effect every time function returns some value (similar to rx: doOnNext but pull based) */
-fun <A, V> IPuee<A, V>.vpeek(spy: IPushee<V>): IPuee<A, V> = this % spy
+fun <A, V> Puee<A, V>.vpeek(spy: Pushee<V>): Puee<A, V> = this % spy
 
 
 // peeks that ignore null values:
-fun <A, V> IPuee<A?, V>.anpeek(spy: IPushee<A>): IPuee<A?, V> = { if (it !== null) spy(it); this(it) }
+fun <A, V> Puee<A?, V>.anpeek(spy: Pushee<A>): Puee<A?, V> = Puee { if (it !== null) spy(it); this(it) }
 
-fun <A, V> IPuee<A, V?>.vnpeek(spy: IPushee<V>): IPuee<A, V?> = this % { if (it !== null) spy(it) }
+fun <A, V> Puee<A, V?>.vnpeek(spy: Pushee<V>): Puee<A, V?> = this % { if (it !== null) spy(it) }
 
 
 /** forwards given items to IPushee, but only if they meet given predicate */
-fun <A> IPushee<A>.afilter(pred: (A) -> Boolean): IPushee<A> = { if (pred(it)) this(it) }
+fun <A> Pushee<A>.afilter(pred: (A) -> Boolean): Pushee<A> = Pushee { if (pred(it)) this(it) }
 
 /** Something like Sequence.filter - warning: it will block until next matching item is found.
  * Usually we will use it with nullable streams and return true for null value (so it does not block forever).
  */
-fun <V> IPullee<V>.vfilter(pred: (V) -> Boolean): IPullee<V> = object : IPullee<V> {
-    override fun invoke(u: Unit): V {
-        var b = this@vfilter(Unit)
-        while (!pred(b))
-            b = this@vfilter(Unit)
-        return b
-    }
+fun <V> Pullee<V>.vfilter(pred: (V) -> Boolean) = Pullee {
+    var b = this@vfilter(Unit)
+    while (!pred(b))
+        b = this@vfilter(Unit)
+    b
 }
 
 @Deprecated("Just use vfilter with predicate that returns true for null", ReplaceWith("vfilter"))
-fun <V> IPullee<V?>.vnfilter(pred: (V) -> Boolean) = vfilter { it === null || pred(it) }
+fun <V> Pullee<V?>.vnfilter(pred: (V) -> Boolean) = vfilter { it === null || pred(it) }
 
 /** pushes forward only specified number of items */
-fun <A> IPushee<A>.atake(n: Long): IPushee<A> = object : IPushee<A> {
+fun <A> Pushee<A>.atake(n: Long): Pushee<A> = object : Pushee<A> {
     var count = n // it is public so user can potentially alter it anytime and make it push some more items.
     override fun invoke(a: A) = if (count-- > 0L) this@atake(a) else Unit
 }
 
 /** pushes forward only specified number of items, then one null value, and then nothing else */
-fun <A> IPushee<A?>.antake(n: Long): IPushee<A?> = object : IPushee<A?> {
+fun <A> Pushee<A?>.antake(n: Long): Pushee<A?> = object : Pushee<A?> {
     var count = n // it is public so user can potentially alter it anytime and make it push some more items.
     override fun invoke(a: A?) { // if a is null it is ok too (because our protocol says it can happen only once)
         if (count > 0L)
@@ -509,20 +503,20 @@ fun <A> IPushee<A?>.antake(n: Long): IPushee<A?> = object : IPushee<A?> {
 }
 
 /** pulls only specified number of items, then returns null values (similar to Kotlin: Sequence.take) */
-fun <V> IPullee<V?>.vntake(n: Long): IPullee<V?> = object : IPullee<V?> {
+fun <V> Pullee<V?>.vntake(n: Long): Pullee<V?> = object : Pullee<V?> {
     var count = n // it is public so user can potentially alter it anytime and make it pull some more items.
     override fun invoke(u: Unit): V? = if (count-- > 0) this@vntake(Unit) else null
 }
 
 
 /** start pushing forward after specified number of (dropped) items */
-fun <A> IPushee<A>.adrop(n: Long): IPushee<A> = object : IPushee<A> {
+fun <A> Pushee<A>.adrop(n: Long): Pushee<A> = object : Pushee<A> {
     var count = n // it is public so user can potentially alter it anytime and make it drop some more items.
     override fun invoke(a: A) = if (count-- <= 0) this@adrop(a) else Unit
 }
 
 /** drops first n items immediately when first item is pulled, then forwards items as they are */
-fun <V> IPullee<V>.vdrop(n: Long): IPullee<V> = object : IPullee<V> {
+fun <V> Pullee<V>.vdrop(n: Long): Pullee<V> = object : Pullee<V> {
     var count = n // it is public so user can potentially alter it anytime and make it drop some more items.
     override fun invoke(u: Unit): V {
         while (count-- > 0) this@vdrop(Unit)
@@ -532,7 +526,7 @@ fun <V> IPullee<V>.vdrop(n: Long): IPullee<V> = object : IPullee<V> {
 
 
 /** forwards items as long as specified predicate holds */
-fun <A> Function1<A, Unit>.atakeWhile(pred: Function1<A, Boolean>): Function1<A, Unit> = object : Function1<A, Unit> {
+fun <A> Pushee<A>.atakeWhile(pred: (A) -> Boolean): Pushee<A> = object : Pushee<A> {
     var end = false
     override fun invoke(a: A) {
         if (end)
@@ -544,7 +538,7 @@ fun <A> Function1<A, Unit>.atakeWhile(pred: Function1<A, Boolean>): Function1<A,
 }
 
 /** forwards items as long as specified predicate holds, then forwards null item, then nothing more */
-fun <A> IPushee<A?>.antakeWhile(pred: (A) -> Boolean): IPushee<A?> = object : IPushee<A?> {
+fun <A> Pushee<A?>.antakeWhile(pred: (A) -> Boolean): Pushee<A?> = object : Pushee<A?> {
     var end = false
     override fun invoke(a: A?) {
         if (end)
@@ -557,7 +551,7 @@ fun <A> IPushee<A?>.antakeWhile(pred: (A) -> Boolean): IPushee<A?> = object : IP
 }
 
 /** forwards items as long as specified predicate holds, then forwards null items */
-fun <V> IPullee<V?>.vntakeWhile(pred: (V) -> Boolean): IPullee<V?> = object : IPullee<V?> {
+fun <V> Pullee<V?>.vntakeWhile(pred: (V) -> Boolean): Pullee<V?> = object : Pullee<V?> {
     var end = false
     override fun invoke(u: Unit): V? {
         if (end)
@@ -572,7 +566,7 @@ fun <V> IPullee<V?>.vntakeWhile(pred: (V) -> Boolean): IPullee<V?> = object : IP
 
 
 /** drops items as long as specified predicate holds, then forwards all next items as they are */
-fun <A> IPushee<A>.adropWhile(pred: (A) -> Boolean): IPushee<A> = object : IPushee<A> {
+fun <A> Pushee<A>.adropWhile(pred: (A) -> Boolean): Pushee<A> = object : Pushee<A> {
     var found = false
     override fun invoke(a: A) {
         if (found)
@@ -585,7 +579,7 @@ fun <A> IPushee<A>.adropWhile(pred: (A) -> Boolean): IPushee<A> = object : IPush
 }
 
 /** drops items as long as specified predicate holds in loop on first call, then forwards next items as they are one by one */
-fun <V> IPullee<V>.vdropWhile(pred: (V) -> Boolean): IPullee<V> = object : IPullee<V> {
+fun <V> Pullee<V>.vdropWhile(pred: (V) -> Boolean): Pullee<V> = object : Pullee<V> {
     var found = false
     override fun invoke(u: Unit): V {
         var v = this@vdropWhile(Unit)
@@ -607,20 +601,20 @@ fun <V> IPullee<V>.vdropWhile(pred: (V) -> Boolean): IPullee<V> = object : IPull
  * NOTE3: usually we compose azip with amap, so this Pair type is only temporary
  * NOTE4: This suprising pullee here (in push based composition) is on purpose (it is not a mistake).
  */
-fun <A, B> IPushee<Pair<A, B>>.azip(pullee: IPullee<B>): IPushee<A> = { this(it to pullee(Unit)) }
+fun <A, B> Pushee<Pair<A, B>>.azip(pullee: Pullee<B>): Pushee<A> = Pushee { this(it to pullee(Unit)) }
 
 /**
  * NOTE: usually we compose vzip with vmap, so this Pair type is only temporary
  */
-fun <V, W> IPullee<V>.vzip(pullee: IPullee<W>): IPullee<Pair<V, W>> = { this(Unit) to pullee(Unit) }
+fun <V, W> Pullee<V>.vzip(pullee: Pullee<W>): Pullee<Pair<V, W>> = Pullee { this(Unit) to pullee(Unit) }
 
 
-fun <A, B> IPushee<Pair<A, B>?>.anzip(pullee: IPullee<B?>): IPushee<A?> = { a: A? ->
+fun <A, B> Pushee<Pair<A, B>?>.anzip(pullee: Pullee<B?>): Pushee<A?> = Pushee { a: A? ->
     val b = pullee(Unit)
     this(if (a === null || b === null) null else a to b)
 }
 
-fun <V, W> IPullee<V?>.vnzip(pullee: IPullee<W?>): IPullee<Pair<V, W>?> = {
+fun <V, W> Pullee<V?>.vnzip(pullee: Pullee<W?>): Pullee<Pair<V, W>?> = Pullee {
     val x = this(it)
     val y = pullee(Unit)
     if (x === null || y === null)
@@ -640,8 +634,8 @@ fun <V, W> IPullee<V?>.vnzip(pullee: IPullee<W?>): IPullee<Pair<V, W>?> = {
 
 
 /** TODO LATER: review it; documentation; implement some tests */
-fun <V> IPullee<IPullee<V?>?>.vnflat(): IPullee<V?> = object : IPullee<V?> {
-    var provider: Function1<Unit, V?>? = null
+fun <V> Pullee<Pullee<V?>?>.vnflat(): Pullee<V?> = object : Pullee<V?> {
+    var provider: Pullee<V?>? = null
     var end = false
     override tailrec fun invoke(u: Unit): V? {
         if (end) return null
@@ -667,9 +661,8 @@ fun <V> IPullee<IPullee<V?>?>.vnflat(): IPullee<V?> = object : IPullee<V?> {
 
 
 // This is similar to lift in RxJava, but works not only for IPushers (IPuer<T, Unit>) but all IPuers (IPullers too)
-fun <T, R, X, Y, C> IPuer<T, R, C>.lift(oper: (IPuee<X, Y>) -> IPuee<T, R>) = object : IPuer<X, Y, C> {
-    override fun invoke(f: (X) -> Y): (C) -> Unit = this@lift(oper(f))
-}
+fun <T, R, X, Y, C> Puer<T, R, C>.lift(oper: Puee<Puee<X, Y>, Puee<T, R> >) =
+    Puer<X, Y, C> { f -> this@lift(oper(f)) }
 // TODO: tests, examples
 
 
@@ -677,79 +670,77 @@ fun <T, R, X, Y, C> IPuer<T, R, C>.lift(oper: (IPuee<X, Y>) -> IPuee<T, R>) = ob
  * Adds a mapping to pushed items of IPuer. Returned values (if any) are left as they are.
  * similar to rx: Observable.map, but it works not only for IPushers, but for all IPuers.
  */
-fun <A, B, V, C> IPuer<A, V, C>.lamap(f: Function1<A, B>): IPuer<B, V, C> = lift { f * it }
+fun <A, B, V, C> Puer<A, V, C>.lamap(f: Puee<A, B>): Puer<B, V, C> = lift { f * it }
 // TODO: tests, examples, check in practice if we even need to define it.. (probably yes: to avoid 'functional headache')
 
 /**
  * Adds a mapping to returned values to IPuers. Arguments are not changed.
  */
-fun <A, V, W, C> IPuer<A, W, C>.lvmap(f: Function1<V, W>): IPuer<A, V, C> = lift { it * f }
+fun <A, V, W, C> Puer<A, W, C>.lvmap(f: Puee<V, W>): Puer<A, V, C> = lift { it * f }
 // TODO: tests, examples, check in practice if we even need to define it.. (probably yes: to avoid 'functional headache')
 
 
-fun <A, B, V, C> IPuer<A?, V, C>.lanmap(f: Function1<A, B>): IPuer<B?, V, C> = lamap(n(f))
-fun <A, V, W, C> IPuer<A, W?, C>.lvnmap(f: Function1<V, W>): IPuer<A, V?, C> = lvmap(n(f))
+fun <A, B, V, C> Puer<A?, V, C>.lanmap(f: Puee<A, B>): Puer<B?, V, C> = lamap(n(f))
+fun <A, V, W, C> Puer<A, W?, C>.lvnmap(f: Puee<V, W>): Puer<A, V?, C> = lvmap(n(f))
 
-fun <A, B, V, C> IPuer<IEvent<A>?, V, C>.laemap(f: Function1<A, B>): IPuer<IEvent<B>?, V, C> = lamap(e(f))
-fun <A, V, W, C> IPuer<A, IEvent<W>?, C>.lvemap(f: Function1<V, W>): IPuer<A, IEvent<V>?, C> = lvmap(e(f))
+fun <A, B, V, C> Puer<Event<A>?, V, C>.laemap(f: Puee<A, B>): Puer<Event<B>?, V, C> = lamap(e(f))
+fun <A, V, W, C> Puer<A, Event<W>?, C>.lvemap(f: Puee<V, W>): Puer<A, Event<V>?, C> = lvmap(e(f))
 
 
-fun <A, V, C> IPuer<A, V, C>.lapeek(spy: Function1<A, Unit>): IPuer<A, V, C> = lift { f -> { spy(it); f(it) } }
+fun <A, V, C> Puer<A, V, C>.lapeek(spy: Pushee<A>): Puer<A, V, C> = lift { f -> Puee { spy(it); f(it) } }
 // TODO: tests, examples, check in practice if we even need to define it.. (probably yes: to avoid 'functional headache')
 
-fun <A, V, C> IPuer<A, V, C>.lvpeek(spy: Function1<V, Unit>): IPuer<A, V, C> = lift { it % spy }
+fun <A, V, C> Puer<A, V, C>.lvpeek(spy: Pushee<V>): Puer<A, V, C> = lift { it % spy }
 // TODO: tests, examples, check in practice if we even need to define it.. (probably yes: to avoid 'functional headache')
 
 
 // lpeeks that ignore null values:
-fun <A, V, C> IPuer<A?, V, C>.lanpeek(spy: Function1<A, Unit>): IPuer<A?, V, C> = lift { f -> { if (it !== null) spy(it); f(it) } }
+fun <A, V, C> Puer<A?, V, C>.lanpeek(spy: Pushee<A>): Puer<A?, V, C> = lift { f -> Puee { if (it !== null) spy(it); f(it) } }
 
-fun <A, V, C> IPuer<A, V?, C>.lvnpeek(spy: Function1<V, Unit>): IPuer<A, V?, C> = lift { it % { if (it !== null) spy(it) } }
-
-
-fun <A, C> IPusher<A, C>.lafilter(pred: Function1<A, Boolean>): IPusher<A, C> = lift<A, Unit, A, Unit, C> { it.afilter(pred) } // TODO: tests, examples
+fun <A, V, C> Puer<A, V?, C>.lvnpeek(spy: Pushee<V>): Puer<A, V?, C> = lift { it % { if (it !== null) spy(it) } }
 
 
-fun <A, C> IPusher<A, C>.latake(n: Long) = lift<A, Unit, A, Unit, C> { it.atake(n) }
-fun <A, C> IPusher<A?, C>.lantake(n: Long) = lift<A?, Unit, A?, Unit, C> { it.antake(n) }
-fun <V, C> IPuller<V?, C>.lvntake(n: Long) = lift<Unit, V?, Unit, V?, C> { it.vntake(n) }
-fun <A, C> IPusher<A, C>.ladrop(n: Long) = lift<A, Unit, A, Unit, C> { it.adrop(n) }
-fun <V, C> IPuller<V, C>.lvdrop(n: Long) = lift<Unit, V, Unit, V, C> { it.vdrop(n) }
+fun <A, C> Pusher<A, C>.lafilter(pred: Function1<A, Boolean>): Pusher<A, C> = lift<A, Unit, A, Unit, C> { it.afilter(pred) } // TODO: tests, examples
 
 
-fun <A, C> IPusher<A, C>.latakeWhile(pred: Function1<A, Boolean>) = lift<A, Unit, A, Unit, C> { it.atakeWhile(pred) }
-fun <A, C> IPusher<A?, C>.lantakeWhile(pred: Function1<A, Boolean>) = lift<A?, Unit, A?, Unit, C> { it.antakeWhile(pred) }
-fun <V, C> IPuller<V?, C>.lvntakeWhile(pred: Function1<V, Boolean>) = lift<Unit, V?, Unit, V?, C> { it.vntakeWhile(pred) }
-fun <A, C> IPusher<A, C>.ladropWhile(pred: Function1<A, Boolean>) = lift<A, Unit, A, Unit, C> { it.adropWhile(pred) }
-fun <V, C> IPuller<V, C>.lvdropWhile(pred: Function1<V, Boolean>) = lift<Unit, V, Unit, V, C> { it.vdropWhile(pred) }
+fun <A, C> Pusher<A, C>.latake(n: Long) = lift<A, Unit, A, Unit, C> { it.atake(n) }
+fun <A, C> Pusher<A?, C>.lantake(n: Long) = lift<A?, Unit, A?, Unit, C> { it.antake(n) }
+fun <V, C> Puller<V?, C>.lvntake(n: Long) = lift<Unit, V?, Unit, V?, C> { it.vntake(n) }
+fun <A, C> Pusher<A, C>.ladrop(n: Long) = lift<A, Unit, A, Unit, C> { it.adrop(n) }
+fun <V, C> Puller<V, C>.lvdrop(n: Long) = lift<Unit, V, Unit, V, C> { it.vdrop(n) }
 
 
-fun <T> pusheeOf(pushees: List<IPushee<T>>) = { t: T -> for (p in pushees) p(t) }
-fun <T> pusheeOf(vararg pushees: IPushee<T>) = pusheeOf(listOf(*pushees))
+fun <A, C> Pusher<A, C>.latakeWhile(pred: (A) -> Boolean) = lift<A, Unit, A, Unit, C> { it.atakeWhile(pred) }
+fun <A, C> Pusher<A?, C>.lantakeWhile(pred: (A) -> Boolean) = lift<A?, Unit, A?, Unit, C> { it.antakeWhile(pred) }
+fun <V, C> Puller<V?, C>.lvntakeWhile(pred: (V) -> Boolean) = lift<Unit, V?, Unit, V?, C> { it.vntakeWhile(pred) }
+fun <A, C> Pusher<A, C>.ladropWhile(pred: (A) -> Boolean) = lift<A, Unit, A, Unit, C> { it.adropWhile(pred) }
+fun <V, C> Puller<V, C>.lvdropWhile(pred: (V) -> Boolean) = lift<Unit, V, Unit, V, C> { it.vdropWhile(pred) }
 
-fun <T, Cmd> merge(pushers: List<IPusher<T, Cmd>>) = object : IPusher<T, Cmd> {
-    override fun invoke(pushee: IPushee<T>): IPushee<Cmd> {
-        val controllers = pushers.map { it(pushee) }
-        return pusheeOf(controllers)
-    }
+
+fun <T> pusheeOf(pushees: List<Pushee<T>>) = Pushee { t: T -> for (p in pushees) p(t) }
+fun <T> pusheeOf(vararg pushees: Pushee<T>) = pusheeOf(listOf(*pushees))
+
+fun <T, Cmd> merge(pushers: List<Pusher<T, Cmd>>) = Pusher<T, Cmd> { pushee ->
+    val controllers = pushers.map { it(pushee) }
+    pusheeOf(controllers)
 }
 
-fun <T, Cmd> merge(vararg pushers: IPusher<T, Cmd>) = merge(listOf(*pushers))
+fun <T, Cmd> merge(vararg pushers: Pusher<T, Cmd>) = merge(listOf(*pushers))
 
 // TODO: think it through again (this is just a fast experiment and I have no idea if it is correct at all)
 // TODO: Syntax can be shortened, but I postpone using clever kotlin syntax to keep it more explicit until I'm sure it's correct.
 // TODO: Common implementation for all base types (pull based too, passive too); use "lift"
-fun <A, T, Cmd> IPusher<T, Cmd>.scan(seed: A, reduce: (Pair<A, T>) -> A): IPusher<A, Cmd> = object : IPusher<A, Cmd> {
+fun <A, T, Cmd> Pusher<T, Cmd>.scan(seed: A, reduce: (Pair<A, T>) -> A): Pusher<A, Cmd> = object : Pusher<A, Cmd> {
     var acc = seed
-    override fun invoke(apushee: IPushee<A>): IPushee<Cmd> {
+    override fun invoke(apushee: Pushee<A>): Pushee<Cmd> {
         val tpushee = { t: T -> acc = reduce(acc to t); apushee(acc) }
         return this@scan(tpushee)
     }
 }
 
-fun <T, Cmd> IPusher<T, Cmd>.withLast(seed: T) = scan(seed to seed) { (last, curr) -> last.second to curr }
+fun <T, Cmd> Pusher<T, Cmd>.withLast(seed: T) = scan(seed to seed) { (last, curr) -> last.second to curr }
 
-fun <T, Cmd> IPusher<T, Cmd>.dropRepeats(seed: T, equals: (Pair<T, T>) -> Boolean = { it.first == it.second })
+fun <T, Cmd> Pusher<T, Cmd>.dropRepeats(seed: T, equals: (Pair<T, T>) -> Boolean = { it.first == it.second })
         = withLast(seed)
         .lafilter { !equals(it) }
         .lamap { it.second }
@@ -758,20 +749,23 @@ fun <T, Cmd> IPusher<T, Cmd>.dropRepeats(seed: T, equals: (Pair<T, T>) -> Boolea
 // TODO: tests, examples for all these take and drop versions..
 
 
+// TODO: drop I prefix??
 interface IPush<in T> {
-    val push: IPushee<T>
+    val push: Pushee<T>
 }
 
+// TODO: drop I prefix??
 interface IPull<out T> {
-    val pull: IPullee<T>
+    val pull: Pullee<T>
 }
 
+// TODO: drop I prefix??
 interface IPeek<out T> {
-    val peek: IPullee<T>
+    val peek: Pullee<T>
         get() = throw UnsupportedOperationException() // it usually is "an optional operation" so by default it throws.
 }
 
-class Remove<I>(private val i: I, private val items: MutableCollection<I>) : Function1<Cancel, Unit> {
+class Remove<I>(private val i: I, private val items: MutableCollection<I>) : Pushee<Cancel> {
     override fun invoke(c: Cancel) {
         items.remove(i)
     } // it does nothing if i is already removed
@@ -780,17 +774,17 @@ class Remove<I>(private val i: I, private val items: MutableCollection<I>) : Fun
 
 /**
  * This is something similar to rx: Subject (or to Jake Wharton library: RxRelay) - but as always: it is simpler ;-)
- * A relay is a pusher you can attach many pushees. Every time you get a Unit -> Unit function you can use to detach your pushee.
+ * A relay is a pusher you can attach many pushees. Every time you get a Pushee<Cancel> you can use to detach your pushee.
  * The relay itself has a "pushee" property that - when called - forwards given item to all currently attached pushees.
  * TODO SOMEDAY: thread-safe version?
  */
-class Relay<A>(initcap: Int = 16) : IPusher<A, Cancel>, IPush<A> {
+class Relay<A>(initcap: Int = 16) : Pusher<A, Cancel>, IPush<A> {
 
-    private val pushees = ArrayList<Function1<A, Unit>>(initcap)
+    private val pushees = ArrayList<Pushee<A>>(initcap)
 
-    override val push: Function1<A, Unit> = { for (p in pushees) p(it) }
+    override val push: Pushee<A> = Pushee { for (p in pushees) p(it) }
 
-    override fun invoke(p: (A) -> Unit): (Cancel) -> Unit {
+    override fun invoke(p: Pushee<A>): Pushee<Cancel> {
         pushees.add(p)
         return Remove(p, pushees)
         // TODO: check why not just lambda instead of Remove class:
@@ -806,13 +800,13 @@ class Relay<A>(initcap: Int = 16) : IPusher<A, Cancel>, IPush<A> {
  * instead it returns special NPullee, and user can iterate through it to get one item from each attached pullee.
  * TODO LATER: test it!!
  */
-class Yaler<R>(initcap: Int = 16) : IPuller<R, Cancel>, IPull<Function1<Unit, R?>> {
+class Yaler<R>(initcap: Int = 16) : Puller<R, Cancel>, IPull<Pullee<R?>> {
 
-    private val pullees = ArrayList<Function1<Unit, R>>(initcap)
+    private val pullees = ArrayList<Pullee<R>>(initcap)
 
-    override val pull: Function1<Unit, Function1<Unit, R?>> = { pullees.asNPullee().vnmap { it(Unit) } }
+    override val pull: Pullee<Pullee<R?>> = Pullee { pullees.asNPullee().vnmap { it(Unit) } }
 
-    override fun invoke(p: (Unit) -> R): (Cancel) -> Unit {
+    override fun invoke(p: Pullee<R>): Pushee<Cancel> {
         pullees.add(p)
         return Remove(p, pullees)
         // TODO: check why not just lambda instead of Remove class (as in Relay)
@@ -821,7 +815,7 @@ class Yaler<R>(initcap: Int = 16) : IPuller<R, Cancel>, IPull<Function1<Unit, R?
 
 
 // TODO SOMEDAY: use type alias: Pushee<A>
-fun <A> IPushee<A>.reschedule(scheduler: IScheduler): IPushee<A> = { a: A -> scheduler.schedule { this(a) } }
+fun <A> Pushee<A>.reschedule(scheduler: IScheduler): Pushee<A> = Pushee { a: A -> scheduler.schedule { this(a) } }
 // WARNING: if we use scheduler that can call our function from more than one thread - we usually should FIRST wrap the original function
 // in "sync" extension function that synchronizes these calls and assures the happens-before relationship between calls.
 
@@ -836,7 +830,7 @@ fun <A> IPushee<A>.reschedule(scheduler: IScheduler): IPushee<A> = { a: A -> sch
  * This operator should work similarly to rx: observeOn. But it does NOT synchronize pushing items,
  * so you almost always want to add an operator "lsync" right after this one.
  */
-fun <A, C> IPusher<A, C>.lreschedule(scheduler: IScheduler): IPusher<A, C> = lift { it.reschedule(scheduler) }
+fun <A, C> Pusher<A, C>.lreschedule(scheduler: IScheduler): Pusher<A, C> = lift { it.reschedule(scheduler) }
 // WARNING 1: we use lift, so all ICommands (if our Pusher supports ICommands) are just passed to upstream Pusher,
 // so for example the Cancel command will just be passed upstream and it will NOT cancel any item already scheduled with provided scheduler
 // WARNING 2: We do not implement any backpressure here, so if upstream pusher is too fast - it will overwhelm our scheduler, and

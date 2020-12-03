@@ -9,45 +9,59 @@ package pl.mareklangiewicz.upue
  * TODO LATER: consider making some functions inline (see Pue.kt:44 for details)
  */
 
+@Deprecated("old experiment")
 fun <T> ident(t: T): T = t
 
-fun <T> const(t: T) = { _: Unit -> t }
+fun <T> const(t: T) = Pullee { t }
 
-
-//TODO NOW!!: all pue base types -> fun interfaces; all operators in this file -> operators on pue fun interfaces
-//(deprecate not really needed stuff)
 
 /** function compositions: (f * g)(x) = g(f(x)) (works also for objects with 'invoke' method */
+@Deprecated("old experiment")
 infix operator fun <A, B> Function0<A>.times(f: Function1<A, B>): Function0<B> = { f(this()) }
 
+@Deprecated("old experiment")
 infix operator fun <A, B, C> Function1<A, B>.times(f: Function1<B, C>): Function1<A, C> = { f(this(it)) }
 
+infix operator fun <A, B, C> Puee<A, B>.times(f: Puee<B, C>) = Puee<A, C> { f(this(it)) }
+
+@Deprecated("old experiment")
 infix operator fun <A, B, C, D> Function2<A, B, C>.times(f: Function1<C, D>): Function2<A, B, D> = { a, b -> f(this(a, b)) }
 
+@Deprecated("old experiment")
 infix operator fun <A, B, C, D, E> Function3<A, B, C, D>.times(f: Function1<D, E>): Function3<A, B, C, E> = { a, b, c -> f(this(a, b, c)) }
 
 /** a "pipe" */
+@Deprecated("old experiment")
 infix operator fun <A, B> A.div(f: Function1<A, B>): B = f(this)
 
+infix operator fun <A, B> A.div(f: Puee<A, B>): B = f(this)
+
 /** It just perform additional given action on any function result. Here U is usually Unit. It is ignored anyway */
+@Deprecated("old experiment")
 infix operator fun <A, U> Function0<A>.rem(f: Function1<A, U>): Function0<A>
         = { val a = this(); f(a); a }
 
+@Deprecated("old experiment")
 infix operator fun <A, B, U> Function1<A, B>.rem(f: Function1<B, U>): Function1<A, B>
         = { val b = this(it); f(b); b }
 
+infix operator fun <A, B> Puee<A, B>.rem(f: Pushee<B>) = Puee<A, B> { val b = invoke(it); f(b); b }
+
+@Deprecated("old experiment")
 infix operator fun <A, B, C, U> Function2<A, B, C>.rem(f: Function1<C, U>): Function2<A, B, C>
         = { a, b -> val c = this(a, b); f(c); c }
 
+@Deprecated("old experiment")
 infix operator fun <A, B, C, D, U> Function3<A, B, C, D>.rem(f: Function1<D, U>): Function3<A, B, C, D>
         = { a, b, c -> val d = this(a, b, c); f(d); d }
 
 
+@Deprecated("old experiment")
 fun <A, B, R>       Function2<A, B, R>      .curry() = { a: A -> { b: B ->                       this(a, b)             } }
+@Deprecated("old experiment")
 fun <A, B, C, R>    Function3<A, B, C, R>   .curry() = { a: A -> { b: B -> { c: C -> {           this(a, b, c)      } } } }
+@Deprecated("old experiment")
 fun <A, B, C, D, R> Function4<A, B, C, D, R>.curry() = { a: A -> { b: B -> { c: C -> { d: D -> { this(a, b, c, d) } } } } }
-
-fun <T> lazy(initializer: (Unit) -> T) = kotlin.lazy { initializer(Unit) }
 
 fun <R> memoize(function: () -> R): () -> R {
     val r by lazy(function)
@@ -55,17 +69,13 @@ fun <R> memoize(function: () -> R): () -> R {
 }
 
 fun <R> memoize(function: (Unit) -> R): (Unit) -> R {
-    val r by lazy(function)
+    val r by lazy { function(Unit) }
     return { r }
 }
 
-// TODO LATER: przejrzec funkcyjne biblioteki kotlinowe w necie na szybko i moze cos tu jeszcze wrzucic
-// ale jestesmy minimalistyczni i nie chcemy za duzo - jak cos mozna latwo recznie
-
 /** Crazy shortcut for doing something a few times... Here U is usually Unit. It is ignored anyway */
-operator fun <U> Int.invoke(f: Function1<Unit, U>) = (1..this).forEach { f(Unit) }
-
-// TODO NOW: dodac gdzie sie da in/out przy zmiennych typowych!
+@Deprecated("old experiment")
+operator fun <U> Int.invoke(f: Pullee<U>) = (1..this).forEach { f(Unit) }
 
 /**
  * crazy "ternary" conditional operator :-)

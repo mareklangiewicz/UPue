@@ -19,7 +19,7 @@ class PueTest {
     val pni = { i: Int? -> println(i) }
     val pd = { d: Double -> println(d) }
 
-    val len = { t: String -> t.length }
+    val len = Puee { t: String -> t.length }
 
     val obj = object : Function1<Int, Int> {
         override operator fun invoke(x: Int) = x * 4
@@ -44,6 +44,7 @@ class PueTest {
 
     }
 
+    @Suppress("DEPRECATION")
     @Test
     fun test1() {
         1 { println("start") }
@@ -51,6 +52,7 @@ class PueTest {
     }
 
 
+    @Suppress("DEPRECATION")
     @Test
     fun testCrazyBasics() {
 
@@ -123,7 +125,7 @@ class PueTest {
 
     @Test
     fun testPushees() {
-        val pushee = { s: String -> println("xxx $s") }
+        val pushee = Pushee { s: String -> println("xxx $s") }
                 .apeek { println("yyy $it") }
                 .afilter { it.length > 4 }
                 .apeek { println("zzz $it") }
@@ -138,7 +140,7 @@ class PueTest {
         pushee("aaaaaaaa")
 
 
-        val pushee2 = { _: String -> Unit }
+        val pushee2 = Pushee<String> { }
                 .apeek(pushee)
                 .apeek(pushee)
 
@@ -151,13 +153,13 @@ class PueTest {
         pushee2("bbbbbbb")
         pushee2("bbbbbbbb")
 
-        val pushee3 = { i: Int -> println(i) }
+        val pushee3 = Pushee { i: Int -> println(i) }
                 .amap<Int, Unit, Int> { it * 2 }
 
         pushee3(2)
         pushee3(4)
 
-        val npushee = { i: Int? -> println(i) }
+        val npushee = Pushee { i: Int? -> println(i) }
                 .anmap<Int, Unit, Int> { it * 2 }
 
         npushee(12)
@@ -261,7 +263,7 @@ class PueTest {
 
         val withLastS = r.withLast("seed")
 
-        val ctl = withLastS(Pair<String, String>::toString * ps)
+        val ctl = withLastS(Puee(Pair<String, String>::toString) * ps)
 
         r.push("1")
         r.push("2")

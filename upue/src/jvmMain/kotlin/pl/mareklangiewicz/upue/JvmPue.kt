@@ -9,19 +9,19 @@ class ExecutorScheduler(private val ses: ScheduledExecutorService) : IScheduler 
 
     constructor(threads: Int = Runtime.getRuntime().availableProcessors() * 2) : this(Executors.newScheduledThreadPool(threads))
 
-    override fun schedule(delay: Long, action: (Unit) -> Unit): (Cancel) -> Unit {
+    override fun schedule(delay: Long, action: (Unit) -> Unit): Pushee<Cancel> {
         val sf = ses.schedule({ action(Unit) }, delay, TimeUnit.MILLISECONDS)
-        return { sf.cancel(true) }
+        return Pushee { sf.cancel(true) }
     }
 
-    override val now = { _: Unit -> System.currentTimeMillis() }
+    override val now = Pullee { System.currentTimeMillis() }
 }
 
-fun <A, V> IPuee<A, V>.sync(): IPuee<A, V> = { a: A -> synchronized(this) { this(a) } }
+fun <A, V> Puee<A, V>.sync(): Puee<A, V> = Puee { a: A -> synchronized(this) { this(a) } }
 // it synchronizes calls and assures the happens-before relationship between calls.
 
 
 /**
  * This operator makes sure all items are pushed serially and that there is the happens-before relationship between pushes.
  */
-fun <A, C> IPusher<A, C>.lsync(): IPusher<A, C> = lift { it.sync() }
+fun <A, C> Pusher<A, C>.lsync(): Pusher<A, C> = lift { it.sync() }
