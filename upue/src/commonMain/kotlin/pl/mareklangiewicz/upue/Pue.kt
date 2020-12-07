@@ -94,9 +94,12 @@ typealias Pusher<T, Cmd> = Puer<T, Unit, Cmd>
 // We will call pushers of nullable streams: npushers; pullers: npullers; etc. (npushee; npushee)
 
 
-// NPullee means Pullee that returns null when the stream has ended.
-fun <R> Iterator<R>.asNPullee() = Pullee { if (hasNext()) next() else null }
+fun <R> Iterator<R>.asPullee(end: R) = Pullee { if (hasNext()) next() else end }
+fun <R> Iterable<R>.asPullee(end: R) = iterator().asPullee(end)
+fun <R> Sequence<R>.asPullee(end: R) = iterator().asPullee(end)
 
+// NPullee means Pullee that returns null when the stream has ended.
+fun <R> Iterator<R>.asNPullee() = asPullee(null)
 fun <R> Iterable<R>.asNPullee() = iterator().asNPullee()
 fun <R> Sequence<R>.asNPullee() = iterator().asNPullee()
 
@@ -156,7 +159,7 @@ fun <R> Pullee<R>.cut(end: R) = object : Pullee<R> {
     }
 }
 
-fun <R> Pullee<R>.ncut() = cut(null)
+fun <R> Pullee<R>.cutnull() = cut(null)
 
 /**
  * TODO: version for Puller (using lift?)
