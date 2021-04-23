@@ -1,10 +1,10 @@
 plugins {
-    kotlin("multiplatform") version "1.4.20"
+    kotlin("multiplatform") version Vers.kotlin
     `maven-publish`
 }
 
 group = "com.github.langara.upue"
-version = "0.0.04"
+version = "0.0.05"
 
 repositories {
     mavenCentral()
