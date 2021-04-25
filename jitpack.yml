@@ -1,2 +1,2 @@
 before_install:
-  ./jitpack_setup.sh
+  ./jitpack_before_install.sh
