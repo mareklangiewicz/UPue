@@ -4,10 +4,11 @@ plugins {
 }
 
 group = "pl.mareklangiewicz.upue"
-version = "0.0.06"
+version = "0.0.07"
 
 repositories {
     mavenCentral()
+    maven(Repos.jitpack)
 }
 
 kotlin {
@@ -34,13 +35,3 @@ kotlin {
         }
     }
 }
-
-//// build a jar with source files
-//task sourcesJar(type: Jar) {
-//    from sourceSets.main.java.srcDirs
-//    classifier = 'sources'
-//}
-//
-//artifacts {
-//    archives sourcesJar
-//}
