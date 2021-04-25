@@ -3,8 +3,8 @@ plugins {
     `maven-publish`
 }
 
-group = "com.github.langara.upue"
-version = "0.0.05"
+group = "pl.mareklangiewicz.upue"
+version = "0.0.06"
 
 repositories {
     mavenCentral()
