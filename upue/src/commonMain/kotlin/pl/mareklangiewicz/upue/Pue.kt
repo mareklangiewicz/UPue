@@ -784,8 +784,18 @@ class Remove<I>(private val i: I, private val items: MutableCollection<I>) : Pus
 class Relay<A>(initcap: Int = 16) : Pusher<A, Cancel>, IPush<A> {
 
     private val pushees = ArrayList<Pushee<A>>(initcap)
+    private val pusheesCache = ArrayList<Pushee<A>>(initcap)
 
-    override val push: Pushee<A> = Pushee { for (p in pushees) p(it) }
+    override val push: Pushee<A> = Pushee {
+        pusheesCache.apply {
+            ensureCapacity(pushees.size)
+            clear()
+            addAll(pushees)
+            // TODO later: make sure it actually saves some allocations (I relay on that clear does not decrease capacity)
+            //  we do not want heap allocations on every push!!
+            for (p in this) p(it)
+        }
+    }
 
     override fun invoke(p: Pushee<A>): Pushee<Cancel> {
         pushees.add(p)
@@ -806,6 +816,7 @@ class Relay<A>(initcap: Int = 16) : Pusher<A, Cancel>, IPush<A> {
 class Yaler<R>(initcap: Int = 16) : Puller<R, Cancel>, IPull<Pullee<R?>> {
 
     private val pullees = ArrayList<Pullee<R>>(initcap)
+    // TODO IMPORTANT: do we need pulleesCache similar to Relay.pusheesCache ????
 
     override val pull: Pullee<Pullee<R?>> = Pullee { pullees.asNPullee().vnmap { it(Unit) } }
 
