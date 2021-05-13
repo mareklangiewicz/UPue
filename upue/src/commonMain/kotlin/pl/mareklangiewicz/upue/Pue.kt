@@ -784,10 +784,11 @@ class Remove<I>(private val i: I, private val items: MutableCollection<I>) : Pus
 class Relay<A>(initcap: Int = 16) : Pusher<A, Cancel>, IPush<A> {
 
     private val pushees = ArrayList<Pushee<A>>(initcap)
-    private val pusheesCache = ArrayList<Pushee<A>>(initcap)
+    // snapshot is necessary for scenarios when some action pushed via this relay causes the pushee list to change.
+    private val pusheesSnapshot = ArrayList<Pushee<A>>(initcap)
 
     override val push: Pushee<A> = Pushee {
-        pusheesCache.apply {
+        pusheesSnapshot.apply {
             ensureCapacity(pushees.size)
             clear()
             addAll(pushees)
@@ -816,7 +817,7 @@ class Relay<A>(initcap: Int = 16) : Pusher<A, Cancel>, IPush<A> {
 class Yaler<R>(initcap: Int = 16) : Puller<R, Cancel>, IPull<Pullee<R?>> {
 
     private val pullees = ArrayList<Pullee<R>>(initcap)
-    // TODO IMPORTANT: do we need pulleesCache similar to Relay.pusheesCache ????
+    // TODO IMPORTANT: do we need pulleesSnapshot similar to Relay.pusheesSnapshot ????
 
     override val pull: Pullee<Pullee<R?>> = Pullee { pullees.asNPullee().vnmap { it(Unit) } }
 
