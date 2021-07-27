@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "pl.mareklangiewicz.upue"
-version = "0.0.07"
+version = "0.0.08"
 
 repositories {
     mavenCentral()
