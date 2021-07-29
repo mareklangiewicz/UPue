@@ -13,11 +13,12 @@ repositories {
 
 kotlin {
     jvm()
-//    js {
-//        browser()
-//    }
+    js {
+        browser()
+    }
 //    linuxX64()
 
+    @Suppress("UNUSED_VARIABLE")
     sourceSets {
         val commonMain by getting
         val commonTest by getting {
