@@ -17,10 +17,10 @@ import java.math.BigDecimal
 
 val Assert: StandardSubjectBuilder by lazy { assert_() }
 
-// TODO NOW: investigate project Kluent (https://github.com/MarkusAmshove/Kluent)
+// TODO_somday: investigate project Kluent (https://github.com/MarkusAmshove/Kluent)
 // (but be careful about polluting too broad namespaces..)
 
-// TODO LATER: not sure about all those generic types below - analyze/test it all later..
+// TODO_someday: not sure about all those generic types below - analyze/test it all later..
 
 infix fun <T> StandardSubjectBuilder.That(target: Comparable<T>?): ComparableSubject<Comparable<T>> = this.that(target)
 infix fun StandardSubjectBuilder.That(target: BigDecimal?): BigDecimalSubject = this.that(target)
