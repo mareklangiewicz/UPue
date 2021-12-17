@@ -14,7 +14,14 @@ repositories {
 kotlin {
     jvm()
     js(IR) {
-        browser()
+        browser {
+            testTask {
+                useKarma {
+//                    useChrome()
+                    useChromeHeadless()
+                }
+            }
+        }
     }
 //    linuxX64()
 
@@ -23,8 +30,7 @@ kotlin {
         val commonMain by getting
         val commonTest by getting {
             dependencies {
-                implementation(kotlin("test-common"))
-                implementation(kotlin("test-annotations-common"))
+                implementation(kotlin("test"))
             }
         }
         val jvmMain by getting {

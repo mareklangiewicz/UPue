@@ -2,7 +2,6 @@ package pl.mareklangiewicz.upue
 
 import org.junit.Test
 import java.util.*
-import pl.mareklangiewicz.upue.*
 
 /**
  * Created by Marek Langiewicz on 30.05.16.

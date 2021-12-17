@@ -63,8 +63,17 @@ interface IArr<T> : ICol<T>, IGet<T>, ISet<T> {
         override fun hasNext(): Boolean = idx < arr.len
         override fun next(): T = arr[idx++]
     }
-
 }
+
+object EmptyArr: IArr<Nothing> {
+    override fun get(idx: Int): Nothing = throw IndexOutOfBoundsException("EmptyArr has no element at idx: $idx")
+    override fun set(idx: Int, item: Nothing) = throw IndexOutOfBoundsException("EmptyArr can't mutate element at idx: $idx")
+    override val len: Int get() = 0
+}
+
+inline fun <T> IArr<out T>?.orEmpty(): IArr<out T> = this ?: EmptyArr
+
+fun <T> emptyArr(): IArr<out T> = EmptyArr
 
 /**
  * Something like Python list slicing (start idx is included, stop idx is excluded)
