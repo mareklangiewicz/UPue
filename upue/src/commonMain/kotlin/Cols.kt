@@ -55,7 +55,10 @@ interface ICol<T> : Iterable<T>, ILen, IContains<T>, IClr {
 // Subclasses may define for example negative indicies count backwards from the end,
 // but we do NOT promise anything like that here in IArr.
 // Any contract enchantments should be documented in particular implementation.
+// TODO: Separate types for mutable stuff! (IMCol, IMArr etc)
 interface IArr<T> : ICol<T>, IGet<T>, ISet<T> {
+
+    override fun set(idx: Int, item: T) { throw UnsupportedOperationException("This arr not mutable") }
 
     override operator fun iterator(): Iterator<T> = Itor(this)
 
@@ -65,15 +68,40 @@ interface IArr<T> : ICol<T>, IGet<T>, ISet<T> {
     }
 }
 
-object EmptyArr: IArr<Nothing> {
+object ArrOf0: IArr<Nothing> {
     override fun get(idx: Int): Nothing = throw IndexOutOfBoundsException("EmptyArr has no element at idx: $idx")
     override fun set(idx: Int, item: Nothing) = throw IndexOutOfBoundsException("EmptyArr can't mutate element at idx: $idx")
     override val len: Int get() = 0
 }
 
-inline fun <T> IArr<out T>?.orEmpty(): IArr<out T> = this ?: EmptyArr
+class ArrOf1<T>(private var item: T, private val mutable: Boolean = false): IArr<T> {
+    override val len get() = 1
+    override fun get(idx: Int) = item.also { idx.chk(0, 0) }
+    override fun set(idx: Int, item: T) = if (mutable) { idx.chk(0, 0); this.item = item } else super.set(idx, item)
+}
 
-fun <T> emptyArr(): IArr<out T> = EmptyArr
+class ArrOf2<T>(private var first: T, private var second: T, private val mutable: Boolean = false): IArr<T> {
+    override val len get() = 2
+    override fun get(idx: Int) = if (idx.chk(0, 1) == 0) first else second
+    override fun set(idx: Int, item: T) = if (mutable) { if(idx.chk(0, 1) == 0) this.first = item else second = item } else super.set(idx, item)
+}
+
+class ArrOf1Get<T>(private val get: () -> T): IArr<T> {
+    override val len get() = 1
+    override fun get(idx: Int) = idx.chk(0, 0).run { get() }
+}
+
+class ArrOfSame<T>(override val len: Int, private val value: T): IArr<T> {
+    override fun get(idx: Int) = idx.chk(0, len-1).run { value }
+}
+
+inline fun <T> IArr<out T>?.orEmpty(): IArr<out T> = this ?: ArrOf0
+
+fun <T> arrOf(): IArr<out T> = ArrOf0
+fun <T> arrOf(item: T): IArr<T> = ArrOf1(item)
+fun <T> arrOf(first: T, second: T): IArr<T> = ArrOf2(first, second)
+fun <T> arrOf(vararg elem: T) = elem.asArr()
+fun <T> Pair<T, T>.asArr(mutable: Boolean = false) = ArrOf2(first, second, mutable)
 
 /**
  * Something like Python list slicing (start idx is included, stop idx is excluded)
@@ -98,6 +126,13 @@ class ArrCut<T>(val arr: IArr<T>, astart: Int, astop: Int) : IArr<T> by arr {
 operator fun <T> IArr<T>.get(start: Int, stop: Int) = ArrCut(this, start, stop) // TODO LATER: test it
 
 
+class ArrSum<T>(private val first: IArr<T>, private val second: IArr<T>): IArr<T> {
+    override val len = first.len + second.len
+    override fun get(idx: Int) = if (idx < first.len) first[idx] else second[idx - first.len]
+    override fun set(idx: Int, item: T) = if (idx < first.len) first[idx] =  item else second[idx - first.len] = item
+}
+
+operator fun <T> IArr<T>.plus(other: IArr<T>) = ArrSum(this, other)
 
 
 
@@ -131,7 +166,6 @@ fun <T> Collection<T>.asCol() = object : ICol<T> {
 
 fun <T> List<T>.asArr() = object : IArr<T> {
     override fun get(idx: Int) = this@asArr.get(idx)
-    override fun set(idx: Int, item: T) { throw UnsupportedOperationException() }
     override val len: Int get() = this@asArr.size
     override fun iterator() = this@asArr.iterator()
     override fun contains(item: T) = this@asArr.contains(item)
@@ -146,9 +180,9 @@ fun <T> Array<T>.asArr(): IArr<T> = object : IArr<T> {
 
 fun <T> List<T>.asLst() = object : ILst<T> {
     override fun get(idx: Int) = this@asLst.get(idx)
-    override fun set(idx: Int, item: T) { throw UnsupportedOperationException() }
-    override fun ins(idx: Int, item: T) { throw UnsupportedOperationException() }
-    override fun del(idx: Int): T { throw UnsupportedOperationException() }
+    override fun set(idx: Int, item: T) { throw UnsupportedOperationException("This lst is not mutable") }
+    override fun ins(idx: Int, item: T) { throw UnsupportedOperationException("This lst is not mutable") }
+    override fun del(idx: Int): T { throw UnsupportedOperationException("This lst is not mutable") }
     override val len: Int get() = this@asLst.size
     override fun iterator() = this@asLst.iterator()
     override fun contains(item: T) = this@asLst.contains(item)

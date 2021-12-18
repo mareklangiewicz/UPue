@@ -752,17 +752,14 @@ fun <T, Cmd> Pusher<T, Cmd>.dropRepeats(seed: T, equals: (Pair<T, T>) -> Boolean
 // TODO: tests, examples for all these take and drop versions..
 
 
-// TODO: drop I prefix??
 interface IPush<in T> {
     val push: Pushee<T>
 }
 
-// TODO: drop I prefix??
 interface IPull<out T> {
     val pull: Pullee<T>
 }
 
-// TODO: drop I prefix??
 interface IPeek<out T> {
     val peek: Pullee<T>
         get() = throw UnsupportedOperationException() // it usually is "an optional operation" so by default it throws.
