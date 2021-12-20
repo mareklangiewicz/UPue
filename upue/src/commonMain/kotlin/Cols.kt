@@ -91,7 +91,7 @@ class ArrOf1Get<T>(private val get: () -> T): IArr<T> {
     override fun get(idx: Int) = idx.chk(0, 0).run { get() }
 }
 
-class ArrOfSame<T>(override val len: Int, private val value: T): IArr<T> {
+class ArrOfSame<T>(override var len: Int, var value: T): IArr<T> {
     override fun get(idx: Int) = idx.chk(0, len-1).run { value }
 }
 
