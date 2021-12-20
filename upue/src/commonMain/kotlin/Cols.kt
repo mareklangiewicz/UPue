@@ -127,7 +127,7 @@ operator fun <T> IArr<T>.get(start: Int, stop: Int) = ArrCut(this, start, stop) 
 
 
 class ArrSum<T>(private val first: IArr<T>, private val second: IArr<T>): IArr<T> {
-    override val len = first.len + second.len
+    override val len get() = first.len + second.len
     override fun get(idx: Int) = if (idx < first.len) first[idx] else second[idx - first.len]
     override fun set(idx: Int, item: T) = if (idx < first.len) first[idx] =  item else second[idx - first.len] = item
 }
