@@ -13,15 +13,15 @@ class LstTest {
 
     @Test fun testConstr() {
 
-        val lst1: ILst<String> = Lst<String>()
+        val lst1: IMutLst<String> = MutLst<String>()
         lst1.add("bla")
         lst1.add("ble")
 
-        val lst2: ILst<String> = Lst.of("bla", "ble")
+        val lst2: IMutLst<String> = MutLst.of("bla", "ble")
 
-        val lst3: ILst<String> = Lst.from(listOf("bla", "ble"))
+        val lst3: IMutLst<String> = MutLst.from(listOf("bla", "ble"))
 
-        val lst4: ILst<String> = Lst.from(listOf("bla", "ble") as Iterable<String>)
+        val lst4: IMutLst<String> = MutLst.from(listOf("bla", "ble") as Iterable<String>)
 
         Assert That lst1 IsEqualTo lst2
         Assert That lst2 IsEqualTo lst1
@@ -43,7 +43,7 @@ class LstTest {
     }
 
     @Test fun testBasics() {
-        val lst = Lst<String>()
+        val lst = MutLst<String>()
         lst.head.push("aaa")
         lst.head.push("bbb")
         lst.head.push("ccc")
@@ -89,7 +89,7 @@ class LstTest {
 
     @Test fun testInsDel() {
 
-        val lst = Lst<String>() // we will test operation on this list.
+        val lst = MutLst<String>() // we will test operation on this list.
 
         val inserts = ArrayDeque<Int>()
         val results = ArrayDeque<ArrayList<String>>()

@@ -5,18 +5,22 @@ package pl.mareklangiewicz.upue
  *
  * Created by Marek Langiewicz on 18.02.16.
  *
- * Collection names are abbreviations to differ from standard Java and Kotlin collection names.
+ * Collection names are abbreviations - it's an intentional strange style - mostly to differ
+ * from standard Java and Kotlin collection names. (also to communicate that this lib is hacky / experimental)
  */
 
-// NOTE: I had some strange compilation problems related to type variance
-// TODO SOMEDAY: read more about mixed site variance:
+// TODO: rename whole thing as "MutLst" and publish as separate mini multiplatform library.
+// (separate from UPue)
+
+
+// TODO_maybe: read more about mixed site variance:
 // http://www.cs.cornell.edu/~ross/publications/mixedsite/mixedsite-tate-fool13.pdf
 
-interface IGet<T> { operator fun get(idx: Int): T }
+interface IGet<out T> { operator fun get(idx: Int): T }
 
-interface ISet<T> { operator fun set(idx: Int, item: T) }
+interface ISet<in T> { operator fun set(idx: Int, item: T) }
 
-interface IContains<T> { operator fun contains(item: T): Boolean }
+interface IContains { operator fun contains(item: Any?): Boolean }
 
 interface ILen { val len: Int }
 
@@ -45,20 +49,16 @@ fun <T> IDeq<T>.asQue(): IQue<T> = object : IQue<T> {
 }
 
 
-interface ICol<T> : Iterable<T>, ILen, IContains<T>, IClr {
-    override fun contains(item: T) = find { it == item } !== null
-    override fun clr(): Unit = throw UnsupportedOperationException()
+interface ICol<out T> : Iterable<T>, ILen, IContains {
+    override fun contains(item: Any?) = indexOf(item) >= 0
 }
 
 
-// IMPORTANT: methods behavior for indicies: idx < 0 || idx >= size   is UNDEFINED here!
-// Subclasses may define for example negative indicies count backwards from the end,
+// IMPORTANT: methods behavior for indices: idx < 0 || idx >= size   is UNDEFINED here!
+// Subclasses may define for example negative indices count backwards from the end,
 // but we do NOT promise anything like that here in IArr.
 // Any contract enchantments should be documented in particular implementation.
-// TODO: Separate types for mutable stuff! (IMCol, IMArr etc)
-interface IArr<T> : ICol<T>, IGet<T>, ISet<T> {
-
-    override fun set(idx: Int, item: T) { throw UnsupportedOperationException("This arr not mutable") }
+interface IArr<out T> : ICol<T>, IGet<T> {
 
     override operator fun iterator(): Iterator<T> = Itor(this)
 
@@ -68,25 +68,27 @@ interface IArr<T> : ICol<T>, IGet<T>, ISet<T> {
     }
 }
 
-object ArrOf0: IArr<Nothing> {
+interface IMutArr<T> : ICol<T>, IArr<T>, ISet<T>
+
+object MutArrOf0: IMutArr<Nothing> {
     override fun get(idx: Int): Nothing = throw IndexOutOfBoundsException("EmptyArr has no element at idx: $idx")
     override fun set(idx: Int, item: Nothing) = throw IndexOutOfBoundsException("EmptyArr can't mutate element at idx: $idx")
     override val len: Int get() = 0
 }
 
-class ArrOf1<T>(private var item: T, private val mutable: Boolean = false): IArr<T> {
+class MutArrOf1<T>(private var item: T): IMutArr<T> {
     override val len get() = 1
     override fun get(idx: Int) = item.also { idx.chk(0, 0) }
-    override fun set(idx: Int, item: T) = if (mutable) { idx.chk(0, 0); this.item = item } else super.set(idx, item)
+    override fun set(idx: Int, item: T) { idx.chk(0, 0); this.item = item }
 }
 
-class ArrOf2<T>(private var first: T, private var second: T, private val mutable: Boolean = false): IArr<T> {
+class MutArrOf2<T>(private var first: T, private var second: T): IMutArr<T> {
     override val len get() = 2
     override fun get(idx: Int) = if (idx.chk(0, 1) == 0) first else second
-    override fun set(idx: Int, item: T) = if (mutable) { if(idx.chk(0, 1) == 0) this.first = item else second = item } else super.set(idx, item)
+    override fun set(idx: Int, item: T) { if(idx.chk(0, 1) == 0) this.first = item else second = item }
 }
 
-class ArrOf1Get<T>(private val get: () -> T): IArr<T> {
+class ArrOf1Get<out T>(private val get: () -> T): IArr<T> {
     override val len get() = 1
     override fun get(idx: Int) = idx.chk(0, 0).run { get() }
 }
@@ -95,13 +97,19 @@ class ArrOfSame<T>(override var len: Int, var value: T): IArr<T> {
     override fun get(idx: Int) = idx.chk(0, len-1).run { value }
 }
 
-inline fun <T> IArr<out T>?.orEmpty(): IArr<out T> = this ?: ArrOf0
+inline fun <T> IArr<T>?.orEmpty(): IArr<T> = this ?: MutArrOf0
 
-fun <T> arrOf(): IArr<out T> = ArrOf0
-fun <T> arrOf(item: T): IArr<T> = ArrOf1(item)
-fun <T> arrOf(first: T, second: T): IArr<T> = ArrOf2(first, second)
+fun <T> mutArrOf() = MutArrOf0
+fun <T> mutArrOf(item: T) = MutArrOf1(item)
+fun <T> mutArrOf(first: T, second: T) = MutArrOf2(first, second)
+fun <T> mutArrOf(vararg elem: T) = elem.asMutArr()
+fun <T> Pair<T, T>.asMutArr() = MutArrOf2(first, second)
+
+fun <T> arrOf() = MutArrOf0 as IArr<T>
+fun <T> arrOf(item: T) = MutArrOf1(item) as IArr<T>
+fun <T> arrOf(first: T, second: T) = MutArrOf2(first, second) as IArr<T>
 fun <T> arrOf(vararg elem: T) = elem.asArr()
-fun <T> Pair<T, T>.asArr(mutable: Boolean = false) = ArrOf2(first, second, mutable)
+fun <T> Pair<T, T>.asArr() = MutArrOf2(first, second) as IArr<T>
 
 /**
  * Something like Python list slicing (start idx is included, stop idx is excluded)
@@ -110,25 +118,30 @@ fun <T> Pair<T, T>.asArr(mutable: Boolean = false) = ArrOf2(first, second, mutab
  * TODO SOMEDAY: third argument: step (also like in Python)
  * TODO LATER: test it!
  */
-class ArrCut<T>(val arr: IArr<T>, astart: Int, astop: Int) : IArr<T> by arr {
+open class ArrCut<out T, ArrT: IArr<T>>(val src: ArrT, astart: Int, astop: Int) : IArr<T> {
 
-    val stop : Int = astop.pos(arr.len).chk(0, arr.len)
-    val start: Int = astart.pos(arr.len).chk(0, stop)
+    val stop : Int = astop.pos(src.len).chk(0, src.len)
+    val start: Int = astart.pos(src.len).chk(0, stop)
     override val len: Int = stop - start
 
-    override fun get(idx: Int         ) = arr.get(start + idx.pos(len).chk(0, len-1)      )
-    override fun set(idx: Int, item: T) = arr.set(start + idx.pos(len).chk(0, len-1), item)
-    override operator fun iterator(): Iterator<T> = IArr.Itor(this) // overridden so it iterates only from start to stop
-    override fun contains(item: T) = find { it == item } !== null // overridden so it searches only from start to stop
-    override fun clr(): Unit = throw UnsupportedOperationException() // we make sure we do not clear whole backing arr
+    override fun get(idx: Int) = src[start + idx.pos(len).chk(0, len-1)]
+    override operator fun iterator(): Iterator<T> = IArr.Itor(this)
+}
+
+class MutArrCut<T>(asrc: IMutArr<T>, astart: Int, astop: Int) : IMutArr<T>, ArrCut<T, IMutArr<T>>(asrc, astart, astop) {
+    override fun set(idx: Int, item: T) { src[start + idx.pos(len).chk(0, len-1)] = item }
 }
 
 operator fun <T> IArr<T>.get(start: Int, stop: Int) = ArrCut(this, start, stop) // TODO LATER: test it
+operator fun <T> IMutArr<T>.get(start: Int, stop: Int) = MutArrCut(this, start, stop) // TODO LATER: test it
 
 
-class ArrSum<T>(private val first: IArr<T>, private val second: IArr<T>): IArr<T> {
+open class ArrSum<out T, ArrT: IArr<T>>(val first: ArrT, val second: ArrT): IArr<T> {
     override val len get() = first.len + second.len
     override fun get(idx: Int) = if (idx < first.len) first[idx] else second[idx - first.len]
+}
+
+class MutArrSum<T>(afirst: IMutArr<T>, asecond: IMutArr<T>): IMutArr<T>, ArrSum<T, IMutArr<T>>(afirst, asecond) {
     override fun set(idx: Int, item: T) = if (idx < first.len) first[idx] =  item else second[idx - first.len] = item
 }
 
@@ -136,7 +149,7 @@ operator fun <T> IArr<T>.plus(other: IArr<T>) = ArrSum(this, other)
 
 
 
-interface ILst<T> : IArr<T>, IDeq<T> {
+interface IMutLst<T> : IMutArr<T>, IDeq<T>, IClr {
     fun ins(idx: Int, item: T)
     fun del(idx: Int): T
     fun add(item: T) = ins(len, item)
@@ -145,82 +158,44 @@ interface ILst<T> : IArr<T>, IDeq<T> {
         val item = del(src)
         ins(if(dst > src) dst-1 else dst, item)
     }
-
-    override fun clr() { // almost always this implementation should be overridden
-        for(i in len-1 downTo 0)
-            del(i)
-    }
+    override fun clr() { for(i in len-1 downTo 0) del(i) }
+        // almost always this implementation should be overridden
 }
-
-
-
-
 
 
 
 fun <T> Collection<T>.asCol() = object : ICol<T> {
     override val len: Int get() = this@asCol.size
     override fun iterator() = this@asCol.iterator()
-    override fun contains(item: T) = this@asCol.contains(item)
+    override fun contains(item: Any?) = item in this@asCol
 }
 
 fun <T> List<T>.asArr() = object : IArr<T> {
-    override fun get(idx: Int) = this@asArr.get(idx)
     override val len: Int get() = this@asArr.size
     override fun iterator() = this@asArr.iterator()
-    override fun contains(item: T) = this@asArr.contains(item)
-}
-
-fun <T> Array<T>.asArr(): IArr<T> = object : IArr<T> {
     override fun get(idx: Int) = this@asArr.get(idx)
-    override fun set(idx: Int, item: T) { this@asArr.set(idx, item) }
-    override val len: Int get() = this@asArr.size
-    override fun iterator() = this@asArr.iterator()
+    override fun contains(item: Any?) = item in this@asArr
 }
 
-fun <T> List<T>.asLst() = object : ILst<T> {
-    override fun get(idx: Int) = this@asLst.get(idx)
-    override fun set(idx: Int, item: T) { throw UnsupportedOperationException("This lst is not mutable") }
-    override fun ins(idx: Int, item: T) { throw UnsupportedOperationException("This lst is not mutable") }
-    override fun del(idx: Int): T { throw UnsupportedOperationException("This lst is not mutable") }
-    override val len: Int get() = this@asLst.size
-    override fun iterator() = this@asLst.iterator()
-    override fun contains(item: T) = this@asLst.contains(item)
-
-    override val head = LstHead(this)
-    override val tail = LstTail(this)
+fun <T> Array<T>.asArr() = asMutArr() as IArr<T>
+fun <T> Array<T>.asMutArr() = object : IMutArr<T> {
+    override val len: Int get() = this@asMutArr.size
+    override fun iterator() = this@asMutArr.iterator()
+    override fun get(idx: Int) = this@asMutArr[idx]
+    override fun set(idx: Int, item: T) { this@asMutArr[idx] = item }
 }
 
+fun <T> MutableList<T>.asMutLst() = object : IMutLst<T> {
+    override fun get(idx: Int) = this@asMutLst[idx]
+    override fun set(idx: Int, item: T) { this@asMutLst[idx] = item }
 
-fun <T> MutableCollection<T>.asMCol() = object : ICol<T> {
-    override val len: Int get() = this@asMCol.size
-    override fun iterator() = this@asMCol.iterator()
-    override fun contains(item: T) = this@asMCol.contains(item)
-    override fun clr() = this@asMCol.clear()
-}
+    override fun ins(idx: Int, item: T) = this@asMutLst.add(idx, item)
+    override fun del(idx: Int): T = this@asMutLst.removeAt(idx)
 
-
-fun <T> MutableList<T>.asMArr() = object : IArr<T> {
-    override fun get(idx: Int) = this@asMArr.get(idx)
-    override fun set(idx: Int, item: T) { this@asMArr.set(idx, item) }
-
-    override val len: Int get() = this@asMArr.size
-    override fun iterator() = this@asMArr.iterator()
-    override fun contains(item: T) = this@asMArr.contains(item)
-    override fun clr() = this@asMArr.clear()
-}
-
-fun <T> MutableList<T>.asMLst() = object : ILst<T> {
-    override fun get(idx: Int) = this@asMLst.get(idx)
-    override fun set(idx: Int, item: T) { this@asMLst.set(idx, item) }
-
-    override fun ins(idx: Int, item: T) = this@asMLst.add(idx, item)
-    override fun del(idx: Int): T = this@asMLst.removeAt(idx)
-
-    override val len: Int get() = this@asMLst.size
-    override fun iterator() = this@asMLst.iterator()
-    override fun contains(item: T) = this@asMLst.contains(item)
-    override fun clr() = this@asMLst.clear()
+    override val len: Int get() = this@asMutLst.size
+    override fun iterator() = this@asMutLst.iterator()
+    override fun contains(item: Any?): Boolean = item in this@asMutLst
+    override fun clr() = this@asMutLst.clear()
 
     override val head = LstHead(this)
     override val tail = LstTail(this)

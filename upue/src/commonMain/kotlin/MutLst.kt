@@ -6,7 +6,7 @@ private val MIN_CAPACITY = 8 // Must be a power of 2
  * Created by Marek Langiewicz on 28.05.16.
  * Pretty versatile collection implementation.
  */
-open class Lst<T>(initcap: Int = MIN_CAPACITY) : ILst<T> {
+open class MutLst<T>(initcap: Int = MIN_CAPACITY) : IMutLst<T> {
 
     private var arr: Array<Any?> // elements can be rotated (if end <= beg)
     private var beg: Int = 0 // idx in arr of first element
@@ -166,32 +166,32 @@ open class Lst<T>(initcap: Int = MIN_CAPACITY) : ILst<T> {
         // TODO SOMEDAY: why do I need to cast to get Lst<T> result type - read more about mixed-site variance
         // http://www.cs.cornell.edu/~ross/publications/mixedsite/mixedsite-tate-fool13.pdf
         @Suppress("UNCHECKED_CAST")
-        fun <T> of(vararg items: T): Lst<T> = from(items as Array<T>)
+        fun <T> of(vararg items: T): MutLst<T> = from(items as Array<T>)
 
-        fun <T> from(items: Array<T>): Lst<T> {
-            val lst = Lst<T>(items.size + 1)
+        fun <T> from(items: Array<T>): MutLst<T> {
+            val lst = MutLst<T>(items.size + 1)
             lst.end = items.size
             for((i, item) in items.withIndex()) lst.arr[i] = item
             return lst
         }
 
-        fun <T> from(items: ICol<T>): Lst<T> {
-            val lst = Lst<T>(items.len + 1)
+        fun <T> from(items: ICol<T>): MutLst<T> {
+            val lst = MutLst<T>(items.len + 1)
             lst.end = items.len
             for((i, item) in items.withIndex()) lst.arr[i] = item
             return lst
         }
 
-        fun <T> from(items: List<T>): Lst<T> {
-            val lst = Lst<T>(items.size + 1)
+        fun <T> from(items: List<T>): MutLst<T> {
+            val lst = MutLst<T>(items.size + 1)
             lst.end = items.size
             for((i, item) in items.withIndex()) lst.arr[i] = item
             return lst
         }
 
         // more general version - but slower
-        fun <T> from(items: Iterable<T>): Lst<T> {
-            val lst = Lst<T>()
+        fun <T> from(items: Iterable<T>): MutLst<T> {
+            val lst = MutLst<T>()
             for(item in items)
                 lst.add(item)
             return lst
@@ -201,7 +201,7 @@ open class Lst<T>(initcap: Int = MIN_CAPACITY) : ILst<T> {
     // NOTE: Kotlin does not allow me to define it in IArr interface..
     override fun equals(other: Any?): Boolean {
         if(other === this) return true
-        if(other === null || other !is Lst<*> || other.len != len) return false
+        if(other === null || other !is MutLst<*> || other.len != len) return false
         val it1 = iterator()
         val it2 = other.iterator()
         while(it1.hasNext() && it2.hasNext())
@@ -218,14 +218,14 @@ open class Lst<T>(initcap: Int = MIN_CAPACITY) : ILst<T> {
 }
 
 // use it to easily implement the head property of your Lst implementation
-class LstHead<T>(val lst: ILst<T>) : ISak<T> {
+class LstHead<T>(val lst: IMutLst<T>) : ISak<T> {
     override val push = Pushee<T> { lst.ins(0, it) }
     override val pull = Pullee<T?> { if(lst.len <= 0) null else lst.del(0) }
     override val peek = Pullee<T?> { if(lst.len <= 0) null else lst.get(0) }
 }
 
 // use it to easily implement the tail property of your Lst implementation
-class LstTail<T>(val lst: ILst<T>) : ISak<T> {
+class LstTail<T>(val lst: IMutLst<T>) : ISak<T> {
     override val push = Pushee<T> { lst.ins(lst.len, it) }
     override val pull = Pullee<T?> { if(lst.len <= 0) null else lst.del(lst.len-1) }
     override val peek = Pullee<T?> { if(lst.len <= 0) null else lst.get(lst.len-1) }
@@ -247,7 +247,7 @@ data class LstMov<out T>(val src: Int, val dst: Int) : LstChg<T>
 // user should usually sync all data when he receives unknown change type.
 
 
-fun <T> ILst<T>.asChgPushee(): (LstChg<T>) -> Unit = {
+fun <T> IMutLst<T>.asChgPushee(): (LstChg<T>) -> Unit = {
     when (it) {
         is LstSet<T> -> set(it.idx, it.item)
         is LstIns<T> -> ins(it.idx, it.item)
@@ -260,7 +260,7 @@ fun <T> ILst<T>.asChgPushee(): (LstChg<T>) -> Unit = {
 }
 
 /** Wraps given lst so it emits all changes. Important: only changes made through this wrapper will be emited. */
-fun <T> ILst<T>.withChgPusher() = LstWithChgPusher(this)
+fun <T> IMutLst<T>.withChgPusher() = LstWithChgPusher(this)
 
 interface IChanges<out T> {
     val changes: Pusher<T, Cancel>
@@ -269,7 +269,7 @@ interface IChanges<out T> {
 
 
 
-open class LstWithChgPusher<T>(private val lst: ILst<T> = Lst()) : ILst<T> by lst, IChanges<LstChg<T>> {
+open class LstWithChgPusher<T>(private val lst: IMutLst<T> = MutLst()) : IMutLst<T> by lst, IChanges<LstChg<T>> {
 
     override val changes = Relay<LstChg<T>>()
 
@@ -321,10 +321,10 @@ open class LstWithChgPusher<T>(private val lst: ILst<T> = Lst()) : ILst<T> by ls
 
 
 
-fun <T> ILst<T>.withFilter(filter: (T) -> Boolean = { true }) = LstWithFilter(filter, this)
+fun <T> IMutLst<T>.withFilter(filter: (T) -> Boolean = { true }) = LstWithFilter(filter, this)
 
 // TODO NOW: test it!
-open class LstWithFilter<T>(filter: (T) -> Boolean = { true }, private val lst: ILst<T> = Lst()) : ILst<T> by lst {
+open class LstWithFilter<T>(filter: (T) -> Boolean = { true }, private val lst: IMutLst<T> = MutLst()) : IMutLst<T> by lst {
 
     val out = LstWithChgPusher<T>()
 
@@ -392,7 +392,7 @@ open class LstWithFilter<T>(filter: (T) -> Boolean = { true }, private val lst: 
 
 
 
-fun <T> ILst<T>.withLimit(limit: Int) = LstWithLimit(limit, this)
+fun <T> IMutLst<T>.withLimit(limit: Int) = LstWithLimit(limit, this)
 
 /**
  * LstWithLimit is a Lst that has limited size.
@@ -400,7 +400,7 @@ fun <T> ILst<T>.withLimit(limit: Int) = LstWithLimit(limit, this)
  * (or first if new element is inserted at the end)
  * So it should never have to reallocate memory.
  */
-open class LstWithLimit<T>(val limit: Int, private val lst: ILst<T> = Lst(limit)): ILst<T> by lst {
+open class LstWithLimit<T>(val limit: Int, private val lst: IMutLst<T> = MutLst(limit)): IMutLst<T> by lst {
 
     override fun ins(idx: Int, item: T) {
         if(len < limit) // no dropping
