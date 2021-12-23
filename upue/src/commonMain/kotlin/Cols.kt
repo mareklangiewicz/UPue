@@ -68,7 +68,7 @@ interface IArr<out T> : ICol<T>, IGet<T> {
     }
 }
 
-interface IMutArr<T> : ICol<T>, IArr<T>, ISet<T>
+interface IMutArr<T> : IArr<T>, ISet<T>
 
 object MutArrOf0: IMutArr<Nothing> {
     override fun get(idx: Int): Nothing = throw IndexOutOfBoundsException("EmptyArr has no element at idx: $idx")
@@ -185,6 +185,7 @@ fun <T> Array<T>.asMutArr() = object : IMutArr<T> {
     override fun set(idx: Int, item: T) { this@asMutArr[idx] = item }
 }
 
+fun <T> MutableList<T>.asMutArr() = asMutLst() as IMutArr<T>
 fun <T> MutableList<T>.asMutLst() = object : IMutLst<T> {
     override fun get(idx: Int) = this@asMutLst[idx]
     override fun set(idx: Int, item: T) { this@asMutLst[idx] = item }
