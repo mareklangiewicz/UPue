@@ -20,6 +20,8 @@ interface IGet<out T> { operator fun get(idx: Int): T }
 
 interface ISet<in T> { operator fun set(idx: Int, item: T) }
 
+interface IAdd<in T> { fun add(item: T) }
+
 interface IContains { operator fun contains(item: Any?): Boolean }
 
 interface ILen { val len: Int }
@@ -53,6 +55,8 @@ interface ICol<out T> : Iterable<T>, ILen, IContains {
     override fun contains(item: Any?) = indexOf(item) >= 0
 }
 
+/** additive collection means user can add items to it */
+interface IAddCol<T> : ICol<T>, IAdd<T>
 
 // IMPORTANT: methods behavior for indices: idx < 0 || idx >= size   is UNDEFINED here!
 // Subclasses may define for example negative indices count backwards from the end,
@@ -68,6 +72,7 @@ interface IArr<out T> : ICol<T>, IGet<T> {
     }
 }
 
+interface IAddArr<T> : IArr<T>, IAddCol<T>
 interface IMutArr<T> : IArr<T>, ISet<T>
 
 object MutArrOf0: IMutArr<Nothing> {
@@ -149,15 +154,15 @@ operator fun <T> IArr<T>.plus(other: IArr<T>) = ArrSum(this, other)
 
 
 
-interface IMutLst<T> : IMutArr<T>, IDeq<T>, IClr {
+interface IMutLst<T> : IMutArr<T>, IAddArr<T>, IDeq<T>, IClr {
     fun ins(idx: Int, item: T)
     fun del(idx: Int): T
-    fun add(item: T) = ins(len, item)
     fun mov(src: Int, dst: Int) {
         if(dst == src) return
         val item = del(src)
         ins(if(dst > src) dst-1 else dst, item)
     }
+    override fun add(item: T) = ins(len, item)
     override fun clr() { for(i in len-1 downTo 0) del(i) }
         // almost always this implementation should be overridden
 }
@@ -185,6 +190,7 @@ fun <T> Array<T>.asMutArr() = object : IMutArr<T> {
     override fun set(idx: Int, item: T) { this@asMutArr[idx] = item }
 }
 
+fun <T> MutableList<T>.asAddArr() = asMutLst() as IAddArr<T>
 fun <T> MutableList<T>.asMutArr() = asMutLst() as IMutArr<T>
 fun <T> MutableList<T>.asMutLst() = object : IMutLst<T> {
     override fun get(idx: Int) = this@asMutLst[idx]
