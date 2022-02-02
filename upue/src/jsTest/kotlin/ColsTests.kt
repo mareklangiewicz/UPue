@@ -15,7 +15,7 @@ class ColsTests {
         assertEquals("x", jsobj[1])
         assertEquals(null, jsobj[2])
 
-        val arr = JsArr<String?>(jsobj)
+        val arr = JsMutArr<String?>(jsobj)
 
         assertEquals(3, arr.len)
         assertEquals(null, arr[0])

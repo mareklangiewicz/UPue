@@ -28,8 +28,13 @@ kotlin {
         val commonMain by getting
         val commonTest by getting {
             dependencies {
-                implementation(kotlin("test"))
-                implementation(project(":upue-test"))
+                api(kotlin("test"))
+            }
+        }
+        val jvmMain by getting {
+            dependencies {
+                api(Deps.junit4)
+                api(Deps.googleTruth)
             }
         }
     }

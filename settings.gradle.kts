@@ -16,3 +16,4 @@ plugins {
 rootProject.name = "upue"
 
 include(":upue")
+include(":upue-test")

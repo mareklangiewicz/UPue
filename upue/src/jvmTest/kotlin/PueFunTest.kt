@@ -4,7 +4,7 @@ import org.junit.Test
 
 class PueFunTest {
 
-    @Suppress("DEPRECATION")
+    @Suppress("DEPRECATION", "UnclearPrecedenceOfBinaryExpression")
     @Test
     fun testConfusingTernaryOperator() {
         val i = true  % 7 ?: 8
