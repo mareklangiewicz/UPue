@@ -23,14 +23,22 @@ kotlin {
     }
 //    linuxX64()
 
-    @Suppress("UNUSED_VARIABLE")
     sourceSets {
-        val commonMain by getting
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
                 implementation(project(":upue-test"))
+                implementation(Deps.uspekx)
+            }
+        }
+        val jvmTest by getting {
+            dependencies {
+                implementation(Deps.junit5engine)
             }
         }
     }
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
