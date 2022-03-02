@@ -9,6 +9,8 @@ package pl.mareklangiewicz.upue
  * from standard Java and Kotlin collection names. (also to communicate that this lib is hacky / experimental)
  */
 
+// TODO NOW: use inline/value classes to wrap standard collections without overhead
+
 // TODO: rename whole thing as "MutLst" and publish as separate mini multiplatform library.
 // (separate from UPue)
 
@@ -188,6 +190,8 @@ fun <T> Array<T>.asMutArr() = object : IMutArr<T> {
     override fun iterator() = this@asMutArr.iterator()
     override fun get(idx: Int) = this@asMutArr[idx]
     override fun set(idx: Int, item: T) { this@asMutArr[idx] = item }
+    override fun contains(item: Any?): Boolean = item in this@asMutArr
+        // current standard Array.contains impl is same as ICol.contains, but better to always use original impl.
 }
 
 fun <T> MutableList<T>.asAddArr() = asMutLst() as IAddArr<T>
