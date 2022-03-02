@@ -1,8 +1,8 @@
 @file:Suppress("UnstableApiUsage", "EXPERIMENTAL_IS_NOT_ENABLED")
 
 import okio.Path.Companion.toOkioPath
-import pl.mareklangiewicz.deps.logSomeEventsToFile
-import pl.mareklangiewicz.deps.includeAndSubstituteBuild
+import pl.mareklangiewicz.utils.*
+import pl.mareklangiewicz.evts.*
 
 gradle.logSomeEventsToFile(rootProject.projectDir.toOkioPath() / "my.gradle.log")
 
