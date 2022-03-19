@@ -14,9 +14,9 @@ plugins {
     id("pl.mareklangiewicz.deps.settings")
 }
 
-rootProject.name = "upue"
+rootProject.name = "UPue"
 
 include(":upue")
 include(":upue-test")
 
-includeAndSubstituteBuild("../USpek", Deps.uspekx, ":uspekx")
+//includeAndSubstituteBuild("../USpek", deps.uspekx, ":uspekx")

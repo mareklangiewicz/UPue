@@ -1,15 +1,14 @@
 import pl.mareklangiewicz.defaults.*
 
 plugins {
-    kotlin("multiplatform") version Vers.kotlin
+    kotlin("multiplatform") version vers.kotlin
     id("maven-publish")
+    id("signing")
 }
 
-defaultGroupAndVer(Deps.upue)
+repositories { defaultRepos(withGoogle = false) }
 
-repositories {
-    defaultRepos(withGoogle = false)
-}
+defaultGroupAndVerAndDescription(libs.UPue)
 
 kotlin {
     jvm()
@@ -30,12 +29,12 @@ kotlin {
             dependencies {
                 implementation(kotlin("test"))
                 implementation(project(":upue-test"))
-                implementation(Deps.uspekx)
+                implementation(deps.uspekx)
             }
         }
         val jvmTest by getting {
             dependencies {
-                implementation(Deps.junit5engine)
+                implementation(deps.junit5engine)
             }
         }
     }
@@ -44,3 +43,7 @@ kotlin {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+defaultPublishing(libs.UPue)
+
+defaultSigning()

@@ -1,11 +1,12 @@
 import pl.mareklangiewicz.defaults.*
 
 plugins {
-    kotlin("multiplatform") version Vers.kotlin
+    kotlin("multiplatform") version vers.kotlin
     id("maven-publish")
+    id("signing")
 }
 
-defaultGroupAndVer(Deps.upue)
+defaultGroupAndVerAndDescription(libs.UPue)
 
 repositories {
     defaultRepos(withGoogle = false)
@@ -34,9 +35,13 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                api(Deps.junit4)
-                api(Deps.googleTruth)
+                api(deps.junit4)
+                api(deps.googleTruth)
             }
         }
     }
 }
+
+defaultPublishing(libs.UPue)
+
+defaultSigning()
