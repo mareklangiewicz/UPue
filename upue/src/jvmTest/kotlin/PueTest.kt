@@ -1,8 +1,7 @@
 package pl.mareklangiewicz.upue
 
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.*
+
 
 /**
  * Created by Marek Langiewicz on 22.02.16.
@@ -33,16 +32,6 @@ class PueTest {
 
     val xxx: (Unit) -> Unit = { println("xxx") }
 
-
-    @Before
-    fun setUp() {
-
-    }
-
-    @After
-    fun tearDown() {
-
-    }
 
     @Suppress("DEPRECATION")
     @Test

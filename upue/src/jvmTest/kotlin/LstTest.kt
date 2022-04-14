@@ -1,6 +1,6 @@
 package pl.mareklangiewicz.upue
 
-import org.junit.Test
+import org.junit.jupiter.api.*
 import java.util.*
 
 /**

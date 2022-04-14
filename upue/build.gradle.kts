@@ -14,6 +14,17 @@ defaultBuildTemplateForMppLib(
     withNativeLinux64 = true,
 )
 
+kotlin {
+    sourceSets {
+        @Suppress("UNUSED_VARIABLE")
+        val jvmTest by getting {
+            dependencies {
+                implementation(project(":upue-test"))
+            }
+        }
+    }
+}
+
 // region [Kotlin Module Build Template]
 
 fun TaskCollection<Task>.defaultKotlinCompileOptions(
