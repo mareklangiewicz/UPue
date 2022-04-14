@@ -9,10 +9,12 @@ plugins {
 
 defaultGroupAndVerAndDescription(libs.UPue)
 
+defaultSonatypeOssStuffFromSystemEnvs()
+
 
 private val rootBuild = rootProjectPath / "build.gradle.kts"
 private val upueModuleBuild = rootProjectPath / "upue" / "build.gradle.kts"
-private val upueTestModuleBuild = rootProjectPath / "upue" / "build.gradle.kts"
+private val upueTestModuleBuild = rootProjectPath / "upue-test" / "build.gradle.kts"
 
 tasks.registerAllThatGroupFun("inject",
     ::checkTemplates,
