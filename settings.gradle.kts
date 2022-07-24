@@ -8,6 +8,10 @@ gradle.logSomeEventsToFile(rootProject.projectDir.toOkioPath() / "my.gradle.log"
 
 pluginManagement {
     includeBuild("../deps.kt")
+    repositories {
+        google()
+        gradlePluginPortal()
+    }
 }
 
 plugins {

@@ -4,7 +4,6 @@ import pl.mareklangiewicz.utils.*
 
 plugins {
     id("io.github.gradle-nexus.publish-plugin") version vers.nexusPublishGradlePlugin
-    kotlin("multiplatform") version vers.kotlin apply false
 }
 
 defaultGroupAndVerAndDescription(libs.UPue)
@@ -16,22 +15,10 @@ private val rootBuild = rootProjectPath / "build.gradle.kts"
 private val upueModuleBuild = rootProjectPath / "upue" / "build.gradle.kts"
 private val upueTestModuleBuild = rootProjectPath / "upue-test" / "build.gradle.kts"
 
-tasks.registerAllThatGroupFun("inject",
-    ::checkTemplates,
-    ::injectTemplates,
-)
+tasks.registerAllThatGroupFun("inject", ::checkTemplates, ::injectTemplates)
 
-fun checkTemplates() {
-    checkRootBuildTemplate(rootBuild)
-    checkKotlinModuleBuildTemplates(upueModuleBuild, upueTestModuleBuild)
-    checkMppModuleBuildTemplates(upueModuleBuild, upueTestModuleBuild)
-}
-
-fun injectTemplates() {
-    injectRootBuildTemplate(rootBuild)
-    injectKotlinModuleBuildTemplate(upueModuleBuild, upueTestModuleBuild)
-    injectMppModuleBuildTemplate(upueModuleBuild, upueTestModuleBuild)
-}
+fun checkTemplates() = checkAllKnownRegionsInProject()
+fun injectTemplates() = injectAllKnownRegionsInProject()
 
 
 // region [Root Build Template]
