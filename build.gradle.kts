@@ -1,27 +1,34 @@
+import pl.mareklangiewicz.deps.LibDetails
 import pl.mareklangiewicz.defaults.*
 import pl.mareklangiewicz.ure.*
 import pl.mareklangiewicz.utils.*
 
 plugins {
     id("io.github.gradle-nexus.publish-plugin") version vers.nexusPublishGradlePlugin
+    kotlin("multiplatform") version vers.kotlin apply false
 }
 
-defaultGroupAndVerAndDescription(libs.UPue)
-
-defaultSonatypeOssStuffFromSystemEnvs()
-
-
-private val rootBuild = rootProjectPath / "build.gradle.kts"
-private val upueModuleBuild = rootProjectPath / "upue" / "build.gradle.kts"
-private val upueTestModuleBuild = rootProjectPath / "upue-test" / "build.gradle.kts"
-
-tasks.registerAllThatGroupFun("inject", ::checkTemplates, ::injectTemplates)
-
-fun checkTemplates() = checkAllKnownRegionsInProject()
-fun injectTemplates() = injectAllKnownRegionsInProject()
+defaultBuildTemplateForRootProject(libs.UPue)
 
 
 // region [Root Build Template]
+
+fun Project.defaultBuildTemplateForRootProject(ossLibDetails: LibDetails? = null) {
+
+    ossLibDetails?.let {
+        defaultGroupAndVerAndDescription(it)
+        defaultSonatypeOssStuffFromSystemEnvs()
+    }
+
+    // kinda workaround for kinda issue with kotlin native
+    // https://youtrack.jetbrains.com/issue/KT-48410/Sync-failed.-Could-not-determine-the-dependencies-of-task-commonizeNativeDistribution.#focus=Comments-27-5144160.0-0
+    repositories { mavenCentral() }
+
+    tasks.registerAllThatGroupFun("inject", ::checkTemplates, ::injectTemplates)
+}
+
+fun checkTemplates() = checkAllKnownRegionsInProject(projectPath)
+fun injectTemplates() = injectAllKnownRegionsInProject(projectPath)
 
 /**
  * System.getenv() should contain six env variables with given prefix, like:
@@ -40,17 +47,19 @@ fun Project.defaultSonatypeOssStuffFromSystemEnvs(envKeyMatchPrefix: String = "M
 }
 
 fun Project.defaultSonatypeOssNexusPublishing(
-    sonatypeStagingProfileId: String = rootExt("sonatypeStagingProfileId"),
-    ossrhUsername: String = rootExt("ossrhUsername"),
-    ossrhPassword: String = rootExt("ossrhPassword"),
-) = nexusPublishing {
-    repositories {
-        sonatype {  // only for users registered in Sonatype after 24 Feb 2021
-            stagingProfileId put sonatypeStagingProfileId
-            username put ossrhUsername
-            password put ossrhPassword
-            nexusUrl put uri(repos.sonatypeOssNexus)
-            snapshotRepositoryUrl put uri(repos.sonatypeOssSnapshots)
+    sonatypeStagingProfileId: String = rootExtString["sonatypeStagingProfileId"],
+    ossrhUsername: String = rootExtString["ossrhUsername"],
+    ossrhPassword: String = rootExtString["ossrhPassword"],
+) {
+    nexusPublishing {
+        this.repositories {
+            sonatype {  // only for users registered in Sonatype after 24 Feb 2021
+                stagingProfileId put sonatypeStagingProfileId
+                username put ossrhUsername
+                password put ossrhPassword
+                nexusUrl put uri(repos.sonatypeOssNexus)
+                snapshotRepositoryUrl put uri(repos.sonatypeOssSnapshots)
+            }
         }
     }
 }
