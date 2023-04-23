@@ -217,8 +217,6 @@ fun Int.chk(min: Int, max: Int) = if(this < min || this > max) throw IndexOutOfB
 
 
 
-// TODO LATER: test IMap stuff below (it's "incubating")
-
 /** null value represents no value under particular key */
 interface IMap<K, out V> : IGet<K, V?> {
     val keys: ICol<K>
@@ -247,44 +245,35 @@ fun <K, V> MutableMap<K, V>.asMutMap() = object : IMutMap<K, V> {
  * It's a "view" of part of src map that sees only keys with specific prefix/suffix.
  * Keys of the "view" are always automatically stripped of cutPrefix and cutSuffix.
  */
-class StrMapCut<out V>(
-    private val src: IMap<String, V>,
-    private val cutPrefix: String = "",
-    private val cutSuffix: String = ""
+open class StrMapCut<out V, MapT: IMap<String, V>>(
+    val src: MapT,
+    val cutPrefix: String = "",
+    val cutSuffix: String = ""
 ): IMap<String, V> {
-    override fun get(key: String): V? = src[cutPrefix + key + cutSuffix]
+    protected fun wrap(key: String) = cutPrefix + key + cutSuffix
+    override fun get(key: String): V? = src[wrap(key)]
     override val keys: ICol<String>
         get() = src.keys.filter { it.startsWith(cutPrefix) && it.endsWith(cutSuffix) }.asCol()
 }
+
+fun <V> IMap<String, V>.cut(cutPrefix: String = "", cutSuffix: String = "") =
+    StrMapCut(this, cutPrefix, cutSuffix)
 
 /**
  * It's a mutable "view" of part of src map that sees only keys with specific prefix/suffix.
  * Keys of the "view" are always automatically stripped of cutPrefix and cutSuffix.
  * Consequently, setting a value, sets it to src under a key with added prefix/suffix.
  */
-class StrMutMapCut<V>(
-    private val src: IMutMap<String, V>,
-    private val cutPrefix: String = "",
-    private val cutSuffix: String = ""
-): IMutMap<String, V> {
-
-    override fun get(key: String): V? = src[cutPrefix + key + cutSuffix]
-
-    override val keys: ICol<String>
-        get() = src.keys.filter { it.startsWith(cutPrefix) && it.endsWith(cutSuffix) }.asCol()
-
+class StrMutMapCut<V, MapT: IMutMap<String, V>>(
+    asrc: MapT,
+    cutPrefix: String = "",
+    cutSuffix: String = ""
+): StrMapCut<V, MapT>(asrc, cutPrefix, cutSuffix), IMutMap<String, V> {
     /** Clears only values under keys with given prefix/suffix (within given "cut") */
     override fun clr() { for (k in keys) this[k] = null }
-
-    override fun set(key: String, item: V?) { src[cutPrefix + key + cutSuffix] = item }
+    override fun set(key: String, item: V?) { src[wrap(key)] = item }
 }
 
-// TODO someday: use IMap stuff to implement KommandLine.Konfig manipulations,
-//  then use it in DepsKt to share common configurations in build files/projects.
-//  Instead of Project.ext.addAllFromSystemEnvs etc..
-//  Use sth like:
-//    StrMutMapCut(System.getenv().copy(), prefix)
-//    Wrap Project.ext.properties in StrMutMapCut
-//    then someExtIMap.setAll(someEnvIMap) and access rootProject "konfig(s)" in other projects
-//
+fun <V> IMutMap<String, V>.cutMut(cutPrefix: String = "", cutSuffix: String = "") =
+    StrMutMapCut(this, cutPrefix, cutSuffix)
 
