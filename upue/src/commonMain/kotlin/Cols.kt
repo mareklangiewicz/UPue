@@ -18,9 +18,9 @@ package pl.mareklangiewicz.upue
 // TODO_maybe: read more about mixed site variance:
 // http://www.cs.cornell.edu/~ross/publications/mixedsite/mixedsite-tate-fool13.pdf
 
-interface IGet<out T> { operator fun get(idx: Int): T }
+interface IGet<in K, out V> { operator fun get(key: K): V }
 
-interface ISet<in T> { operator fun set(idx: Int, item: T) }
+interface ISet<in K, in V> { operator fun set(key: K, item: V) }
 
 interface IAdd<in T> { fun add(item: T) }
 
@@ -61,10 +61,10 @@ interface ICol<out T> : Iterable<T>, ILen, IContains {
 interface IAddCol<T> : ICol<T>, IAdd<T>
 
 // IMPORTANT: methods behavior for indices: idx < 0 || idx >= size   is UNDEFINED here!
-// Subclasses may define for example negative indices count backwards from the end,
+// Subclasses may define, for example, negative indices count backwards from the end,
 // but we do NOT promise anything like that here in IArr.
 // Any contract enchantments should be documented in particular implementation.
-interface IArr<out T> : ICol<T>, IGet<T> {
+interface IArr<out T> : ICol<T>, IGet<Int, T> {
 
     override operator fun iterator(): Iterator<T> = Itor(this)
 
@@ -75,33 +75,33 @@ interface IArr<out T> : ICol<T>, IGet<T> {
 }
 
 interface IAddArr<T> : IArr<T>, IAddCol<T>
-interface IMutArr<T> : IArr<T>, ISet<T>
+interface IMutArr<T> : IArr<T>, ISet<Int, T>
 
 object MutArrOf0: IMutArr<Nothing> {
-    override fun get(idx: Int): Nothing = throw IndexOutOfBoundsException("EmptyArr has no element at idx: $idx")
-    override fun set(idx: Int, item: Nothing) = throw IndexOutOfBoundsException("EmptyArr can't mutate element at idx: $idx")
+    override fun get(key: Int): Nothing = throw IndexOutOfBoundsException("EmptyArr has no element at idx: $key")
+    override fun set(key: Int, item: Nothing) = throw IndexOutOfBoundsException("EmptyArr can't mutate element at idx: $key")
     override val len: Int get() = 0
 }
 
 class MutArrOf1<T>(private var item: T): IMutArr<T> {
     override val len get() = 1
-    override fun get(idx: Int) = item.also { idx.chk(0, 0) }
-    override fun set(idx: Int, item: T) { idx.chk(0, 0); this.item = item }
+    override fun get(key: Int) = item.also { key.chk(0, 0) }
+    override fun set(key: Int, item: T) { key.chk(0, 0); this.item = item }
 }
 
 class MutArrOf2<T>(private var first: T, private var second: T): IMutArr<T> {
     override val len get() = 2
-    override fun get(idx: Int) = if (idx.chk(0, 1) == 0) first else second
-    override fun set(idx: Int, item: T) { if(idx.chk(0, 1) == 0) this.first = item else second = item }
+    override fun get(key: Int) = if (key.chk(0, 1) == 0) first else second
+    override fun set(key: Int, item: T) { if(key.chk(0, 1) == 0) this.first = item else second = item }
 }
 
 class ArrOf1Get<out T>(private val get: () -> T): IArr<T> {
     override val len get() = 1
-    override fun get(idx: Int) = idx.chk(0, 0).run { get() }
+    override fun get(key: Int) = key.chk(0, 0).run { get() }
 }
 
 class ArrOfSame<T>(override var len: Int, var value: T): IArr<T> {
-    override fun get(idx: Int) = idx.chk(0, len-1).run { value }
+    override fun get(key: Int) = key.chk(0, len-1).run { value }
 }
 
 inline fun <T> IArr<T>?.orEmpty(): IArr<T> = this ?: MutArrOf0
@@ -120,7 +120,7 @@ fun <T> Pair<T, T>.asArr() = MutArrOf2(first, second) as IArr<T>
 
 /**
  * Something like Python list slicing (start idx is included, stop idx is excluded)
- * Negative start and stop indicies are also interpreted like in Python
+ * Negative start and stop indices are also interpreted like in Python
  * IMPORTANT: this implementation assumes that underlying array does not change its size
  * TODO SOMEDAY: third argument: step (also like in Python)
  * TODO LATER: test it!
@@ -131,12 +131,12 @@ open class ArrCut<out T, ArrT: IArr<T>>(val src: ArrT, astart: Int, astop: Int) 
     val start: Int = astart.pos(src.len).chk(0, stop)
     override val len: Int = stop - start
 
-    override fun get(idx: Int) = src[start + idx.pos(len).chk(0, len-1)]
+    override fun get(key: Int) = src[start + key.pos(len).chk(0, len-1)]
     override operator fun iterator(): Iterator<T> = IArr.Itor(this)
 }
 
 class MutArrCut<T>(asrc: IMutArr<T>, astart: Int, astop: Int) : IMutArr<T>, ArrCut<T, IMutArr<T>>(asrc, astart, astop) {
-    override fun set(idx: Int, item: T) { src[start + idx.pos(len).chk(0, len-1)] = item }
+    override fun set(key: Int, item: T) { src[start + key.pos(len).chk(0, len-1)] = item }
 }
 
 operator fun <T> IArr<T>.get(start: Int, stop: Int) = ArrCut(this, start, stop) // TODO LATER: test it
@@ -145,11 +145,11 @@ operator fun <T> IMutArr<T>.get(start: Int, stop: Int) = MutArrCut(this, start, 
 
 open class ArrSum<out T, ArrT: IArr<T>>(val first: ArrT, val second: ArrT): IArr<T> {
     override val len get() = first.len + second.len
-    override fun get(idx: Int) = if (idx < first.len) first[idx] else second[idx - first.len]
+    override fun get(key: Int) = if (key < first.len) first[key] else second[key - first.len]
 }
 
 class MutArrSum<T>(afirst: IMutArr<T>, asecond: IMutArr<T>): IMutArr<T>, ArrSum<T, IMutArr<T>>(afirst, asecond) {
-    override fun set(idx: Int, item: T) = if (idx < first.len) first[idx] =  item else second[idx - first.len] = item
+    override fun set(key: Int, item: T) = if (key < first.len) first[key] =  item else second[key - first.len] = item
 }
 
 operator fun <T> IArr<T>.plus(other: IArr<T>) = ArrSum(this, other)
@@ -180,7 +180,7 @@ fun <T> Collection<T>.asCol() = object : ICol<T> {
 fun <T> List<T>.asArr() = object : IArr<T> {
     override val len: Int get() = this@asArr.size
     override fun iterator() = this@asArr.iterator()
-    override fun get(idx: Int) = this@asArr.get(idx)
+    override fun get(key: Int) = this@asArr.get(key)
     override fun contains(item: Any?) = item in this@asArr
 }
 
@@ -188,17 +188,17 @@ fun <T> Array<T>.asArr() = asMutArr() as IArr<T>
 fun <T> Array<T>.asMutArr() = object : IMutArr<T> {
     override val len: Int get() = this@asMutArr.size
     override fun iterator() = this@asMutArr.iterator()
-    override fun get(idx: Int) = this@asMutArr[idx]
-    override fun set(idx: Int, item: T) { this@asMutArr[idx] = item }
+    override fun get(key: Int) = this@asMutArr[key]
+    override fun set(key: Int, item: T) { this@asMutArr[key] = item }
     override fun contains(item: Any?): Boolean = item in this@asMutArr
-        // current standard Array.contains impl is same as ICol.contains, but better to always use original impl.
+        // current standard Array.contains impl is the same as ICol.contains, but better to always use original impl.
 }
 
 fun <T> MutableList<T>.asAddArr() = asMutLst() as IAddArr<T>
 fun <T> MutableList<T>.asMutArr() = asMutLst() as IMutArr<T>
 fun <T> MutableList<T>.asMutLst() = object : IMutLst<T> {
-    override fun get(idx: Int) = this@asMutLst[idx]
-    override fun set(idx: Int, item: T) { this@asMutLst[idx] = item }
+    override fun get(key: Int) = this@asMutLst[key]
+    override fun set(key: Int, item: T) { this@asMutLst[key] = item }
 
     override fun ins(idx: Int, item: T) = this@asMutLst.add(idx, item)
     override fun del(idx: Int): T = this@asMutLst.removeAt(idx)
@@ -217,4 +217,74 @@ fun Int.chk(min: Int, max: Int) = if(this < min || this > max) throw IndexOutOfB
 
 
 
+// TODO LATER: test IMap stuff below (it's "incubating")
+
+/** null value represents no value under particular key */
+interface IMap<K, out V> : IGet<K, V?> {
+    val keys: ICol<K>
+}
+
+/** null value represents no value under particular key */
+interface IMutMap<K, V> : IMap<K, V>, ISet<K, V?>, IClr {
+    fun setAll(asrc: IMap<K, V>) = asrc.keys.forEach { this[it] = asrc[it] }
+}
+
+fun <K, V> Map<K, V>.asMap() = object : IMap<K, V> {
+    override fun get(key: K): V? = this@asMap[key]
+    override val keys: ICol<K> = this@asMap.keys.asCol()
+}
+
+fun <K, V> MutableMap<K, V>.asMutMap() = object : IMutMap<K, V> {
+    override fun clr() = clear()
+    override fun get(key: K): V? = this@asMutMap[key]
+    override val keys: ICol<K> = this@asMutMap.keys.asCol()
+    override fun set(key: K, item: V?) {
+        if (item == null) remove(key) else this@asMutMap.set(key, item)
+    }
+}
+
+/**
+ * It's a "view" of part of src map that sees only keys with specific prefix/suffix.
+ * Keys of the "view" are always automatically stripped of cutPrefix and cutSuffix.
+ */
+class StrMapCut<out V>(
+    private val src: IMap<String, V>,
+    private val cutPrefix: String = "",
+    private val cutSuffix: String = ""
+): IMap<String, V> {
+    override fun get(key: String): V? = src[cutPrefix + key + cutSuffix]
+    override val keys: ICol<String>
+        get() = src.keys.filter { it.startsWith(cutPrefix) && it.endsWith(cutSuffix) }.asCol()
+}
+
+/**
+ * It's a mutable "view" of part of src map that sees only keys with specific prefix/suffix.
+ * Keys of the "view" are always automatically stripped of cutPrefix and cutSuffix.
+ * Consequently, setting a value, sets it to src under a key with added prefix/suffix.
+ */
+class StrMutMapCut<V>(
+    private val src: IMutMap<String, V>,
+    private val cutPrefix: String = "",
+    private val cutSuffix: String = ""
+): IMutMap<String, V> {
+
+    override fun get(key: String): V? = src[cutPrefix + key + cutSuffix]
+
+    override val keys: ICol<String>
+        get() = src.keys.filter { it.startsWith(cutPrefix) && it.endsWith(cutSuffix) }.asCol()
+
+    /** Clears only values under keys with given prefix/suffix (within given "cut") */
+    override fun clr() { for (k in keys) this[k] = null }
+
+    override fun set(key: String, item: V?) { src[cutPrefix + key + cutSuffix] = item }
+}
+
+// TODO someday: use IMap stuff to implement KommandLine.Konfig manipulations,
+//  then use it in DepsKt to share common configurations in build files/projects.
+//  Instead of Project.ext.addAllFromSystemEnvs etc..
+//  Use sth like:
+//    StrMutMapCut(System.getenv().copy(), prefix)
+//    Wrap Project.ext.properties in StrMutMapCut
+//    then someExtIMap.setAll(someEnvIMap) and access rootProject "konfig(s)" in other projects
+//
 
