@@ -818,9 +818,9 @@ class Yaler<R>(initcap: Int = 16) : Puller<R, Cancel>, IPull<Pullee<R?>> {
 
     override val pull: Pullee<Pullee<R?>> = Pullee { pullees.asNPullee().vnmap { it(Unit) } }
 
-    override fun invoke(p: Pullee<R>): Pushee<Cancel> {
-        pullees.add(p)
-        return Remove(p, pullees)
+    override fun invoke(t: Pullee<R>): Pushee<Cancel> {
+        pullees.add(t)
+        return Remove(t, pullees)
         // TODO: check why not just lambda instead of Remove class (as in Relay)
     }
 }
