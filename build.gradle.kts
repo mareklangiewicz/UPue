@@ -1,4 +1,3 @@
-import pl.mareklangiewicz.deps.LibDetails
 import pl.mareklangiewicz.defaults.*
 import pl.mareklangiewicz.ure.*
 import pl.mareklangiewicz.utils.*
@@ -9,16 +8,14 @@ plugins {
     plug(plugs.KotlinMulti) apply false
 }
 
-val UPue = langaraLibDetails(
-    name = "UPue",
-    description = "Micro Multiplatform Reactive Library.",
-    githubUrl = "https://github.com/langara/UPue",
-    version = Ver(0, 0, 11)
+defaultBuildTemplateForRootProject(
+    langaraLibDetails(
+        name = "UPue",
+        description = "Micro Multiplatform Reactive Library.",
+        githubUrl = "https://github.com/langara/UPue",
+        version = Ver(0, 0, 11)
+    )
 )
-
-
-defaultBuildTemplateForRootProject(UPue)
-
 
 // region [Root Build Template]
 
