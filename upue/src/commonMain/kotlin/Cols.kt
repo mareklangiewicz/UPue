@@ -224,6 +224,7 @@ interface IMap<K, out V> : IGet<K, V?> {
 
 /** null value represents no value under particular key */
 interface IMutMap<K, V> : IMap<K, V>, ISet<K, V?>, IClr {
+    override fun clr() { for (k in keys) this[k] = null }
     fun setAll(asrc: IMap<K, V>) = asrc.keys.forEach { this[it] = asrc[it] }
 }
 
@@ -269,8 +270,6 @@ class StrMutMapCut<V, MapT: IMutMap<String, V>>(
     cutPrefix: String = "",
     cutSuffix: String = ""
 ): StrMapCut<V, MapT>(asrc, cutPrefix, cutSuffix), IMutMap<String, V> {
-    /** Clears only values under keys with given prefix/suffix (within given "cut") */
-    override fun clr() { for (k in keys) this[k] = null }
     override fun set(key: String, item: V?) { src[wrap(key)] = item }
 }
 
