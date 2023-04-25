@@ -1,3 +1,5 @@
+@file:Suppress("unused", "MemberVisibilityCanBePrivate")
+
 package pl.mareklangiewicz.upue
 
 /**
@@ -180,7 +182,7 @@ fun <T> Collection<T>.asCol() = object : ICol<T> {
 fun <T> List<T>.asArr() = object : IArr<T> {
     override val len: Int get() = this@asArr.size
     override fun iterator() = this@asArr.iterator()
-    override fun get(key: Int) = this@asArr.get(key)
+    override fun get(key: Int) = this@asArr[key]
     override fun contains(item: Any?) = item in this@asArr
 }
 
@@ -237,9 +239,7 @@ fun <K, V> MutableMap<K, V>.asMutMap() = object : IMutMap<K, V> {
     override fun clr() = clear()
     override fun get(key: K): V? = this@asMutMap[key]
     override val keys: ICol<K> = this@asMutMap.keys.asCol()
-    override fun set(key: K, item: V?) {
-        if (item == null) remove(key) else this@asMutMap.set(key, item)
-    }
+    override fun set(key: K, item: V?) { if (item == null) remove(key) else this@asMutMap[key] = item }
 }
 
 /**
