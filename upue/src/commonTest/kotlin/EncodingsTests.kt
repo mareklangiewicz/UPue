@@ -13,12 +13,14 @@ class EncodingsTests {
 
         "On 1234 string" o { testStringOnAFewAbc16Encoders("1234") }
 
+        "On SOME_CODE string" o { testStringOnAFewAbc16Encoders(SOME_CODE) }
+
         "On random string" o {
             val rnd = Random(667)
             val string = buildString {
                 repeat(10_000) { append(rnd.nextInt().toChar()) }
             }.encodeToByteArray().decodeToString() // trick to replace any invalid char sequences (utf craziness)
-            println(string.take(20)) // funny it's mostly chinese chars
+//            println(string.take(20)) // funny it's mostly chinese chars
             testStringOnAFewAbc16Encoders(string)
         }
     }
@@ -35,12 +37,12 @@ class EncodingsTests {
         for ((name, encoder) in encoders) {
             "On string encoded with $name" o {
                 val encoded = encoder.enc(string)
-                println(encoded.take(80))
+//                println(encoded.take(80))
 
                 "decoding back gives original string" o {
                     val decoded = encoder.dec(encoded)
-                    println(string.take(20))
-                    println(decoded.take(20))
+//                    println(string.take(20))
+//                    println(decoded.take(20))
                     assertEquals(string, decoded, "Wrong result after decoding")
                 }
 
@@ -61,7 +63,6 @@ class EncodingsTests {
     }
 }
 
-// TODO: test encoders on it
 private val SOME_CODE = """
     companion object Default : Random(), Serializable {
         private val defaultRandom: Random = defaultPlatformRandom()
