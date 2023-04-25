@@ -1,6 +1,5 @@
 package pl.mareklangiewicz.upue
 
-import pl.mareklangiewicz.uspek.eq
 import pl.mareklangiewicz.uspek.o
 import pl.mareklangiewicz.uspek.uspek
 import kotlin.random.Random
@@ -11,49 +10,51 @@ import kotlin.test.assertEquals
 class EncodingsTests {
 
     @Test fun abc16uspek() = uspek {
+
+        "On 1234 string" o { testStringOnAFewAbc16Encoders("1234") }
+
         "On random string" o {
             val rnd = Random(667)
             val string = buildString {
-                repeat(10_000) {
-                    append(rnd.nextInt().toChar())
-                }
+                repeat(10_000) { append(rnd.nextInt().toChar()) }
             }.encodeToByteArray().decodeToString() // trick to replace any invalid char sequences (utf craziness)
             println(string.take(20)) // funny it's mostly chinese chars
+            testStringOnAFewAbc16Encoders(string)
+        }
+    }
 
-            "On Abc13Encoders" o {
-                val encoders = listOf(
-                    "default" to Abc16Encoder(),
-                    "upper" to Abc16Encoder(uppercase = true),
-                    "obfuscated 334" to Abc16Encoder(obfuscation = 334),
-                    "obfuscated 334 upper" to Abc16Encoder(uppercase = true, obfuscation = 334),
-                    "obfuscated -7" to Abc16Encoder(obfuscation = -7),
-                )
+    private fun testStringOnAFewAbc16Encoders(string: String) = "On Abc16Encoders" o {
+        val encoders = listOf(
+                "default" to Abc16Encoder(),
+                "upper" to Abc16Encoder(uppercase = true),
+                "obfuscated 334" to Abc16Encoder(obfuscation = 334),
+                "obfuscated 334 upper" to Abc16Encoder(uppercase = true, obfuscation = 334),
+                "obfuscated -7" to Abc16Encoder(obfuscation = -7),
+        )
 
-                for ((name, encoder) in encoders) {
-                    "On random string encoded with $name" o {
-                        val encoded = encoder.enc(string)
-                        println(encoded.take(80))
+        for ((name, encoder) in encoders) {
+            "On string encoded with $name" o {
+                val encoded = encoder.enc(string)
+                println(encoded.take(80))
 
-                        "decoding back gives original string" o {
-                            val decoded = encoder.dec(encoded)
-                            println(string.take(20))
-                            println(decoded.take(20))
-                            assertEquals(string, decoded, "Wrong result after decoding")
-                        }
+                "decoding back gives original string" o {
+                    val decoded = encoder.dec(encoded)
+                    println(string.take(20))
+                    println(decoded.take(20))
+                    assertEquals(string, decoded, "Wrong result after decoding")
+                }
 
-                        val slen = string.length
-                        val slenExpMax = slen * 8
-                        val elen = encoded.length
-                        "encoded length is between $slen and $slenExpMax" o {
-                            assertContains(slen..slenExpMax, elen, "$slen !in $slen..$slenExpMax")
-                        }
+                val slen = string.length
+                val slenExpMax = slen * 8
+                val elen = encoded.length
+                "encoded length $elen is between $slen and $slenExpMax" o {
+                    assertContains(slen..slenExpMax, elen, "$slen !in $slen..$slenExpMax")
+                }
 
-                        val arange = if ("upper" in name) 'A'..'P' else 'a'..'p'
-                        "all chars are in $arange" o {
-                            for (ch in encoded)
-                                assertContains(arange, ch, "Strange char: $ch found.")
-                        }
-                    }
+                val arange = if ("upper" in name) 'A'..'P' else 'a'..'p'
+                "all chars are in $arange" o {
+                    for (ch in encoded)
+                        assertContains(arange, ch, "Strange char: $ch found.")
                 }
             }
         }

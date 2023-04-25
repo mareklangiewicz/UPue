@@ -40,7 +40,7 @@ private class Abc16UByteEncoder(
 ): IEncDec<UByte, Pair<Char, Char>> {
 
     override fun dec(e: Pair<Char, Char>) =
-        ((e.first.code-acode shl 4) + (e.second.code-acode and 15)).toUByte()
+        ((e.first.code-acode shl 4) + (e.second.code-acode and 15)).toUByte().let { uobf?.dec(it) ?: it }
 
     override fun enc(d: UByte): Pair<Char, Char> =
         (uobf?.enc(d) ?: d).toInt().let { Char(acode + (it ushr 4)) to Char(acode + (it and 15)) }
