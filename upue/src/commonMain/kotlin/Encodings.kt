@@ -9,17 +9,41 @@ interface IEncDec<Decoded: Any, Encoded: Any> {
     fun dec(e: Encoded): Decoded
 }
 
-class MutMapEncoded<Key, Decoded: Any, Encoded: Any>(
+class RevEncDec<D: Any, E: Any>(val src: IEncDec<E, D>) : IEncDec<D, E> {
+    override fun enc(d: D): E = src.dec(d)
+    override fun dec(e: E): D = src.enc(e)
+}
+
+fun <D: Any, E: Any> IEncDec<D, E>.rev() = RevEncDec(this)
+
+open class MutMapEncoded<Key, Decoded: Any, Encoded: Any>(
         val src: IMutMap<Key, Decoded>,
-        val encoder: IEncDec<Decoded, Encoded>
+        val encoder: IEncDec<Decoded, Encoded>,
 ): IMutMap<Key, Encoded> {
     override fun get(key: Key): Encoded? = src[key]?.let(encoder::enc)
     override fun set(key: Key, item: Encoded?) { src[key] = item?.let(encoder::dec) }
     override val keys get() = src.keys
 }
 
+class MutMapEncodedIf<Key, Coded: Any>(
+        src: IMutMap<Key, Coded>,
+        encoder: IEncDec<Coded, Coded>,
+        val predicate: (key: Key) -> Boolean,
+): MutMapEncoded<Key, Coded, Coded>(src, encoder) {
+    override fun get(key: Key) = if (predicate(key)) super.get(key) else src[key]
+    override fun set(key: Key, item: Coded?) { src[key] = if (predicate(key)) item?.let(encoder::dec) else item }
+    override val keys get() = src.keys
+}
+
 fun <Key, Decoded: Any, Encoded: Any> IMutMap<Key, Decoded>.asEncoded(encoder: IEncDec<Decoded, Encoded>) =
         MutMapEncoded(this, encoder)
+
+fun <Key, Coded: Any> IMutMap<Key, Coded>.asEncodedIf(encoder: IEncDec<Coded, Coded>, predicate: (key: Key) -> Boolean) =
+        MutMapEncodedIf(this, encoder, predicate)
+
+/** Encodes/decodes values under keys ending with ".abc16" with Abc16Encoder */
+fun IMutMap<String, String>.asEncodedIfAbc16(obfuscation: Int?) =
+        MutMapEncodedIf(this, Abc16Encoder(obfuscation = obfuscation)) { it.endsWith(".abc16") }
 
 /**
  * Example UByte obfuscation as IOneToOne class.
