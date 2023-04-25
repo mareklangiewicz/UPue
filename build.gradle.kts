@@ -13,7 +13,7 @@ defaultBuildTemplateForRootProject(
         name = "UPue",
         description = "Micro Multiplatform Reactive Library.",
         githubUrl = "https://github.com/langara/UPue",
-        version = Ver(0, 0, 11)
+        version = Ver(0, 0, 12)
     )
 )
 
