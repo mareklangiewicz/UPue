@@ -43,7 +43,7 @@ fun <Key, Coded: Any> IMutMap<Key, Coded>.asEncodedIf(encoder: IEncDec<Coded, Co
 
 /** Encodes/decodes values under keys ending with ".abc16" with Abc16Encoder */
 fun IMutMap<String, String>.asEncodedIfAbc16(obfuscation: Int? = null) =
-        MutMapEncodedIf(this, Abc16Encoder(obfuscation = obfuscation)) { it.endsWith(".abc16") }
+        asEncodedIf(Abc16Encoder(obfuscation = obfuscation)) { it.endsWith(".abc16") }
 
 /**
  * Example UByte obfuscation as IOneToOne class.
