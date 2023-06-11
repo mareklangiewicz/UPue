@@ -4,17 +4,23 @@ package pl.mareklangiewicz.upue
 
 /*
 
+
+class IdentKey(private val obj: Any?) {
+    override fun equals(other: Any?): Boolean = this === other
+    override fun hashCode(): Int = obj?.hashCode() ?: 0
+}
 // maybe needed to easily implement multiplatform maps with reference equality semantics. just wrap keys in this class.
 // sth similar to Java:
 // https://developer.android.com/reference/java/util/IdentityHashMap
 // https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/IdentityHashMap.html
 // see also answers here:
 // https://stackoverflow.com/questions/74525402/how-to-force-object-equivalence-for-keys-in-a-kotlin-hashmap
-
-class IdentKey(private val obj: Any?) {
-    override fun equals(other: Any?): Boolean = this === other
-    override fun hashCode(): Int = obj?.hashCode() ?: 0
-}
+// But probably best would be to implement my own MutMap when I allow to provide custom comparator for keys.
+// That way I could use === and have multiplatform IdentityHashMap without wrapping keys all the time.
+// Then I could create WrpCache as below, but with custom comparator,
+// Then it would be best solution for TreeBrowser.kt:MemTreeSystem cache
+// (but maybe in the future kotlin will allow value classes with custom equals/hashCode?? is it possible?)
+// (would that allow me to use normal map with value class IdentKey and avoid actual wrapping??)
 
 
 // C&P from treebrowser:UReflect.cmn.kt
