@@ -1,7 +1,6 @@
 import pl.mareklangiewicz.defaults.*
-import pl.mareklangiewicz.ure.*
-import pl.mareklangiewicz.utils.*
 import pl.mareklangiewicz.deps.*
+import pl.mareklangiewicz.utils.*
 
 plugins {
     plug(plugs.NexusPublish)
@@ -13,7 +12,7 @@ defaultBuildTemplateForRootProject(
         name = "UPue",
         description = "Micro Multiplatform Reactive Library.",
         githubUrl = "https://github.com/langara/UPue",
-        version = Ver(0, 0, 12)
+        version = Ver(0, 0, 13)
     )
 )
 

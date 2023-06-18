@@ -15,7 +15,7 @@ pluginManagement {
 }
 
 plugins {
-    id("pl.mareklangiewicz.deps.settings") version "0.2.36"
+    id("pl.mareklangiewicz.deps.settings") version "0.2.40"
 }
 
 rootProject.name = "UPue"
