@@ -12,8 +12,9 @@ defaultBuildTemplateForRootProject(
         name = "UPue",
         description = "Micro Multiplatform Reactive Library.",
         githubUrl = "https://github.com/langara/UPue",
-        version = Ver(0, 0, 13)
-    )
+        version = Ver(0, 0, 14)
+    ),
+    withSonatypeOssPublishing = true,
 )
 
 // region [Root Build Template]
