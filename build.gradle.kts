@@ -12,7 +12,7 @@ defaultBuildTemplateForRootProject(
     name = "UPue",
     description = "Micro Multiplatform Reactive Library.",
     githubUrl = "https://github.com/mareklangiewicz/UPue",
-    version = Ver(0, 0, 17),
+    version = Ver(0, 0, 18),
     // https://s01.oss.sonatype.org/content/repositories/releases/pl/mareklangiewicz/upue/
     // https://github.com/mareklangiewicz/UPue/releases
     settings = LibSettings(
