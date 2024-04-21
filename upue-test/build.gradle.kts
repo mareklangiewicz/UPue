@@ -8,7 +8,14 @@ plugins {
   plugAll(plugs.KotlinMulti, plugs.MavenPublish, plugs.Signing)
 }
 
-defaultBuildTemplateForBasicMppLib()
+
+// TODO_later: probably deprecate or rewrite into nicer multiplatform dsl?
+// upue-test is old jvm / google-truth based assertion DSL used only in upue
+// I'll probably deprecate it, let's stop publishing it - upue should be micro.
+
+val settings = rootExtLibDetails.settings.copy(withSonatypeOssPublishing = false)
+val details = rootExtLibDetails.copy(settings = settings)
+defaultBuildTemplateForBasicMppLib(details)
 
 kotlin {
   sourceSets {
