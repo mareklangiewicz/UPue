@@ -10,10 +10,10 @@ val buildScanPublishingAllowed =
   // true
   // false
 
-// region [My Settings Stuff <~~]
+// region [[My Settings Stuff <~~]]
 // ~~>".*/Deps\.kt"~~>"../DepsKt"<~~
-// endregion [My Settings Stuff <~~]
-// region [My Settings Stuff]
+// endregion [[My Settings Stuff <~~]]
+// region [[My Settings Stuff]]
 
 pluginManagement {
   repositories {
@@ -33,8 +33,8 @@ pluginManagement {
 }
 
 plugins {
-  id("pl.mareklangiewicz.deps.settings") version "0.3.01" // https://plugins.gradle.org/search?term=mareklangiewicz
-  id("com.gradle.develocity") version "3.17.2" // https://docs.gradle.com/enterprise/gradle-plugin/
+  id("pl.mareklangiewicz.deps.settings") version "0.3.12" // https://plugins.gradle.org/search?term=mareklangiewicz
+  id("com.gradle.develocity") version "3.17.4" // https://docs.gradle.com/enterprise/gradle-plugin/
 }
 
 develocity {
@@ -45,7 +45,7 @@ develocity {
   }
 }
 
-// endregion [My Settings Stuff]
+// endregion [[My Settings Stuff]]
 
 include(":upue")
 include(":upue-test")
