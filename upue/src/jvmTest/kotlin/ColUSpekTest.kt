@@ -3,6 +3,9 @@ package pl.mareklangiewicz.upue
 import org.junit.jupiter.api.TestFactory
 import pl.mareklangiewicz.uspek.*
 
+
+internal infix fun <T> T.eq(expected: T) = check(this == expected) { "$this != $expected" }
+
 class ColUSpekTest {
 
     @TestFactory
