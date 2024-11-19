@@ -52,6 +52,7 @@ fun Project.setMyWeirdSubstitutions(
 }
 
 fun RepositoryHandler.addRepos(settings: LibReposSettings) = with(settings) {
+  @Suppress("DEPRECATION")
   if (withMavenLocal) mavenLocal()
   if (withMavenCentral) mavenCentral()
   if (withGradle) gradlePluginPortal()
@@ -59,31 +60,24 @@ fun RepositoryHandler.addRepos(settings: LibReposSettings) = with(settings) {
   if (withKotlinx) maven(repos.kotlinx)
   if (withKotlinxHtml) maven(repos.kotlinxHtml)
   if (withComposeJbDev) maven(repos.composeJbDev)
-  if (withComposeCompilerAxDev) maven(repos.composeCompilerAxDev)
   if (withKtorEap) maven(repos.ktorEap)
   if (withJitpack) maven(repos.jitpack)
 }
 
-// FIXME: doc says it could be now also applied globally instead for each task (and it works for andro too)
-// https://kotlinlang.org/docs/gradle-compiler-options.html#target-the-jvm
+// TODO_maybe: doc says it could be now also applied globally instead for each task (and it works for andro too)
 //   But it's only for jvm+andro, so probably this is better:
 //   https://kotlinlang.org/docs/gradle-compiler-options.html#for-all-kotlin-compilation-tasks
 fun TaskCollection<Task>.defaultKotlinCompileOptions(
-  jvmTargetVer: String? = vers.JvmDefaultVer, // FIXME_later: use JvmTarget.JVM_XX enum
+  apiVer: KotlinVersion = KotlinVersion.KOTLIN_2_1,
+  jvmTargetVer: String? = null, // it's better to use jvmToolchain (normally done in fun allDefault)
   renderInternalDiagnosticNames: Boolean = false,
-  suppressComposeCheckKotlinVer: Ver? = null,
 ) = withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
   compilerOptions {
-    apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0) // FIXME_later: add param.
+    apiVersion.set(apiVer)
     jvmTargetVer?.let { jvmTarget = JvmTarget.fromTarget(it) }
     if (renderInternalDiagnosticNames) freeCompilerArgs.add("-Xrender-internal-diagnostic-names")
     // useful, for example, to suppress some errors when accessing internal code from some library, like:
     // @file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE", "EXPOSED_PARAMETER_TYPE", "EXPOSED_PROPERTY_TYPE", "CANNOT_OVERRIDE_INVISIBLE_MEMBER")
-    suppressComposeCheckKotlinVer?.ver?.let {
-      freeCompilerArgs.add(
-        "-Pplugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=$it",
-      )
-    }
   }
 }
 
@@ -121,7 +115,7 @@ fun MavenPublication.defaultPOM(lib: LibDetails) = pom {
   scm { url put lib.githubUrl }
 }
 
-/** See also: root project template-mpp: addDefaultStuffFromSystemEnvs */
+/** See also: root project template-full: addDefaultStuffFromSystemEnvs */
 fun Project.defaultSigning(
   keyId: String = rootExtString["signing.keyId"],
   key: String = rootExtReadFileUtf8TryOrNull("signing.keyFile") ?: rootExtString["signing.key"],
@@ -180,15 +174,15 @@ Hacky workaround for gradle error with signing+publishing on gradle 8.1-rc-1:
 FAILURE: Build failed with an exception.
 
 * What went wrong:
-A problem was found with the configuration of task ':template-mpp-lib:signJvmPublication' (type 'Sign').
-  - Gradle detected a problem with the following location: '/home/marek/code/kotlin/DepsKt/template-mpp/template-mpp-lib/build/libs/template-mpp-lib-0.0.02-javadoc.jar.asc'.
+A problem was found with the configuration of task ':template-full-lib:signJvmPublication' (type 'Sign').
+  - Gradle detected a problem with the following location: '/home/marek/code/kotlin/KGround/template-full/template-full-lib/build/libs/template-full-lib-0.0.02-javadoc.jar.asc'.
 
-    Reason: Task ':template-mpp-lib:publishJsPublicationToMavenLocal' uses this output of task ':template-mpp-lib:signJvmPublication' without declaring an explicit or implicit dependency. This can lead to incorrect results being produced, depending on what order the tasks are executed.
+    Reason: Task ':template-full-lib:publishJsPublicationToMavenLocal' uses this output of task ':template-full-lib:signJvmPublication' without declaring an explicit or implicit dependency. This can lead to incorrect results being produced, depending on what order the tasks are executed.
 
     Possible solutions:
-      1. Declare task ':template-mpp-lib:signJvmPublication' as an input of ':template-mpp-lib:publishJsPublicationToMavenLocal'.
-      2. Declare an explicit dependency on ':template-mpp-lib:signJvmPublication' from ':template-mpp-lib:publishJsPublicationToMavenLocal' using Task#dependsOn.
-      3. Declare an explicit dependency on ':template-mpp-lib:signJvmPublication' from ':template-mpp-lib:publishJsPublicationToMavenLocal' using Task#mustRunAfter.
+      1. Declare task ':template-full-lib:signJvmPublication' as an input of ':template-full-lib:publishJsPublicationToMavenLocal'.
+      2. Declare an explicit dependency on ':template-full-lib:signJvmPublication' from ':template-full-lib:publishJsPublicationToMavenLocal' using Task#dependsOn.
+      3. Declare an explicit dependency on ':template-full-lib:signJvmPublication' from ':template-full-lib:publishJsPublicationToMavenLocal' using Task#mustRunAfter.
 
     Please refer to https://docs.gradle.org/8.1-rc-1/userguide/validation_problems.html#implicit_dependency for more details about this problem.
 
@@ -244,8 +238,8 @@ fun Project.defaultBuildTemplateForBasicMppLib(
       addCommonMainDependencies = addCommonMainDependencies,
     )
   }
-  configurations.checkVerSync()
-  tasks.defaultKotlinCompileOptions(details.settings.withJvmVer)
+  configurations.checkVerSync(warnOnly = true)
+  tasks.defaultKotlinCompileOptions(jvmTargetVer = null) // jvmVer is set in fun allDefault using jvmToolchain
   tasks.defaultTestsOptions(onJvmUseJUnitPlatform = details.settings.withTestJUnit5)
   if (plugins.hasPlugin("maven-publish")) {
     defaultPublishing(details)
@@ -283,6 +277,7 @@ fun KotlinMultiplatformExtension.allDefault(
   if (withAndro && !ignoreAndroTarget) androidTarget {
     // TODO_someday some kmp andro publishing. See kdoc above why not yet.
   }
+  withJvmVer?.let { jvmToolchain(it.toInt()) } // works for jvm and android
   sourceSets {
     val commonMain by getting {
       dependencies {
@@ -292,7 +287,7 @@ fun KotlinMultiplatformExtension.allDefault(
     }
     val commonTest by getting {
       dependencies {
-        implementation(kotlin("test"))
+        implementation(Kotlin.test)
         if (withTestUSpekX) implementation(Langiewicz.uspekx)
       }
     }
