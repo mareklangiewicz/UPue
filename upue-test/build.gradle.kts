@@ -5,7 +5,7 @@ import pl.mareklangiewicz.deps.*
 import pl.mareklangiewicz.utils.*
 
 plugins {
-  plugAll(plugs.KotlinMulti)
+  plugAll(plugs.KotlinMulti) // not adding signing/publishing here, see below.
 }
 
 // TODO_later: probably deprecate or rewrite into nicer multiplatform dsl?
