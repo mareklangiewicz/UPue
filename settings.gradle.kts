@@ -34,8 +34,8 @@ pluginManagement {
 }
 
 plugins {
-  id("pl.mareklangiewicz.deps.settings") version "0.3.60" // https://plugins.gradle.org/search?term=mareklangiewicz
-  id("com.gradle.develocity") version "3.18.2" // https://docs.gradle.com/develocity/gradle-plugin/
+  id("pl.mareklangiewicz.deps.settings") version "0.3.67" // https://plugins.gradle.org/search?term=mareklangiewicz
+  id("com.gradle.develocity") version "3.19.1" // https://docs.gradle.com/develocity/gradle-plugin/
 }
 
 develocity {
