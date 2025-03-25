@@ -3,7 +3,6 @@ import pl.mareklangiewicz.deps.*
 import pl.mareklangiewicz.utils.*
 
 plugins {
-  plug(plugs.NexusPublish)
   plug(plugs.KotlinMulti) apply false
 }
 
@@ -12,8 +11,8 @@ defaultBuildTemplateForRootProject(
     name = "UPue",
     description = "Micro Multiplatform Reactive Library.",
     githubUrl = "https://github.com/mareklangiewicz/UPue",
-    version = Ver(0, 0, 21),
-    // https://s01.oss.sonatype.org/content/repositories/releases/pl/mareklangiewicz/upue/
+    version = Ver(0, 0, 22),
+    // https://central.sonatype.com/artifact/pl.mareklangiewicz/upue/versions
     // https://github.com/mareklangiewicz/UPue/releases
     settings = LibSettings(
       withNativeLinux64 = true,
