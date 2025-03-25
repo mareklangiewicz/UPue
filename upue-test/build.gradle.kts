@@ -1,18 +1,29 @@
+
+// region [[Basic MPP Lib Build Imports and Plugs]]
+
 import org.jetbrains.kotlin.gradle.dsl.*
 import org.jetbrains.kotlin.gradle.plugin.*
+import com.vanniktech.maven.publish.*
 import pl.mareklangiewicz.defaults.*
 import pl.mareklangiewicz.deps.*
 import pl.mareklangiewicz.utils.*
 
 plugins {
-  plugAll(plugs.KotlinMulti) // not adding signing/publishing here, see below.
+  plugAll(plugs.KotlinMulti, plugs.VannikPublish)
 }
+
+// endregion [[Basic MPP Lib Build Imports and Plugs]]
 
 // TODO_later: probably deprecate or rewrite into nicer multiplatform dsl?
 // upue-test is old jvm / google-truth based assertion DSL used only in upue
 // I'll probably deprecate it, let's stop publishing it - upue should be micro.
 
-defaultBuildTemplateForBasicMppLib()
+val oldDetails = rootExtLibDetails
+val newSettings = oldDetails.settings.copy(withSonatypeOssPublishing = false)
+val newDetails = oldDetails.copy(settings = newSettings)
+
+
+defaultBuildTemplateForBasicMppLib(newDetails)
 
 kotlin {
   sourceSets {
