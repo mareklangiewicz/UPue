@@ -1,3 +1,7 @@
+@file:Suppress("UnstableApiUsage")
+
+import pl.mareklangiewicz.deps.*
+import pl.mareklangiewicz.utils.extLib
 
 rootProject.name = "UPue"
 
@@ -34,8 +38,8 @@ pluginManagement {
 }
 
 plugins {
-  id("pl.mareklangiewicz.deps.settings") version "0.3.87" // https://plugins.gradle.org/search?term=mareklangiewicz
-  id("com.gradle.develocity") version "4.0.2" // https://docs.gradle.com/develocity/gradle-plugin/
+  id("pl.mareklangiewicz.deps.settings") version "0.4.62" // https://plugins.gradle.org/search?term=mareklangiewicz
+  id("com.gradle.develocity") version "4.5.1" // https://docs.gradle.com/develocity/gradle-plugin/
 }
 
 develocity {
@@ -47,6 +51,30 @@ develocity {
 }
 
 // endregion [[My Settings Stuff]]
+
+val enableJs = true
+val enableNative = true
+
+gradle.extLib = lib(
+  info = myLibInfo(
+    name = "UPue",
+    description = "Micro Multiplatform Reactive Library.",
+    githubUrl = "https://github.com/mareklangiewicz/UPue",
+    version = Ver(0, 0, 23),
+    // https://central.sonatype.com/artifact/pl.mareklangiewicz/upue/versions
+    // https://github.com/mareklangiewicz/UPue/releases
+  ),
+  flags = LibFlags(
+    // withJs is stated here on PURPOSE. The old LibSettings defaulted it to true and this repo
+    // relied on that silently; LibFlags defaults it to false, so leaving it out would drop the
+    // jsMain/jsTest source sets and still build green.
+    withJs = enableJs,
+    withLinuxX64 = enableNative,
+    withCentralPublish = true,
+  ),
+  withCompose = false, // was: compose = null
+  // andro is absent by default
+)
 
 include(":upue")
 include(":upue-test")

@@ -1,34 +1,22 @@
+
+// region [[Basic Root Build Imports and Plugs]]
+
 import pl.mareklangiewicz.defaults.*
-import pl.mareklangiewicz.deps.*
 import pl.mareklangiewicz.utils.*
+import pl.mareklangiewicz.deps.*
+import pl.mareklangiewicz.templatefun.*
 
 plugins {
+  plug(plugs.TemplateFun) apply false
   plug(plugs.KotlinMulti) apply false
+
+  // Resolve the publish plugin ONCE here, with its version. Without this the only source of
+  // it is the templatefun plugin's own classpath (templatefun depends on it), which Gradle sees as
+  // "unknown version" -- and then a versioned request in a subproject cannot be checked
+  // against it.
+  plug(plugs.VannikPublish) apply false
 }
 
-defaultBuildTemplateForRootProject(
-  myLibDetails(
-    name = "UPue",
-    description = "Micro Multiplatform Reactive Library.",
-    githubUrl = "https://github.com/mareklangiewicz/UPue",
-    version = Ver(0, 0, 23),
-    // https://central.sonatype.com/artifact/pl.mareklangiewicz/upue/versions
-    // https://github.com/mareklangiewicz/UPue/releases
-    settings = LibSettings(
-      withNativeLinux64 = true,
-      compose = null,
-      withCentralPublish = true,
-    ),
-  ),
-)
+// endregion [[Basic Root Build Imports and Plugs]]
 
-// region [[Root Build Template]]
-
-fun Project.defaultBuildTemplateForRootProject(details: LibDetails? = null) {
-  details?.let {
-    rootExtLibDetails = it
-    defaultGroupAndVerAndDescription(it)
-  }
-}
-
-// endregion [[Root Build Template]]
+defaultGroupAndVerAndDescription(gradle.extLib)
