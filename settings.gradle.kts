@@ -60,7 +60,7 @@ gradle.extLib = lib(
     name = "UPue",
     description = "Micro Multiplatform Reactive Library.",
     githubUrl = "https://github.com/mareklangiewicz/UPue",
-    version = Ver(0, 0, 23),
+    version = Ver(0, 0, 24),
     // https://central.sonatype.com/artifact/pl.mareklangiewicz/upue/versions
     // https://github.com/mareklangiewicz/UPue/releases
   ),
