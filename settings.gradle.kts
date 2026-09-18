@@ -38,7 +38,7 @@ pluginManagement {
 }
 
 plugins {
-  id("pl.mareklangiewicz.deps.settings") version "0.4.62" // https://plugins.gradle.org/search?term=mareklangiewicz
+  id("pl.mareklangiewicz.deps.settings") version "0.4.63" // https://plugins.gradle.org/search?term=mareklangiewicz
   id("com.gradle.develocity") version "4.5.1" // https://docs.gradle.com/develocity/gradle-plugin/
 }
 
@@ -70,7 +70,12 @@ gradle.extLib = lib(
     // jsMain/jsTest source sets and still build green.
     withJs = enableJs,
     withLinuxX64 = enableNative,
-    withCentralPublish = true,
+    // withCentralPublish is GONE from LibFlags as of DepsKt 0.4.63: it was a per-REPO flag on the
+    // object every module clones for PLATFORM reasons, so it was inherited by modules that never
+    // asked (see USpek, where six SAMPLE apps got it that way). :upue opts in with
+    // LibPublish(toCentral = true); :upue-test says LibPublish(), which is published-but-not-to-
+    // Central -- the state it previously had to reach by copying this Lib and turning the flag off.
+    // See DepsKt/docs/design/publish-intent-per-module.md.
   ),
   withCompose = false, // was: compose = null
   // andro is absent by default
